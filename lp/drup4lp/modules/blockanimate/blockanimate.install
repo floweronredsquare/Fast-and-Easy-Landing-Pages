@@ -1,0 +1,88 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for the blockanimate module.
+ */
+
+/**
+ * Implements hook_install().
+ */
+function blockanimate_install() {
+  $schema['block'] = array();
+  blockanimate_schema_alter($schema);
+  foreach ($schema['block']['fields'] as $field => $field_spec) {
+    if (db_field_exists('block', $field)) {
+      watchdog('system', 'Module install: Attempt to recreate field: "%field",
+        when it already exists.', array('%field' => $field), WATCHDOG_WARNING
+      );
+    }
+    else {
+      db_add_field('block', $field, $field_spec);
+    }
+  }
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function blockanimate_uninstall() {
+  $schema['block'] = array();
+  blockanimate_schema_alter($schema);
+  foreach ($schema['block']['fields'] as $field => $field_spec) {
+    db_drop_field('block', $field);
+  }
+}
+
+/**
+ * Implements hook_schema_alter().
+ *
+ * Other modules, such as block_class & i18n_block also modify the block
+ * database table. This module leverages Drupal core's block table.
+ */
+function blockanimate_schema_alter(&$schema) {
+  if (isset($schema['block'])) {
+    $schema['block']['fields']['animate_css_class'] = array(
+      'type' => 'varchar',
+      'length' => 255,
+      'not null' => TRUE,
+      'default' => '',
+      'description' => 'String containing the animate CSS class for the block.',
+    );
+    $schema['block']['fields']['animate_css_infinite'] = array(
+      'type' => 'int',
+      'not null' => TRUE,
+      'size' => 'tiny',
+      'default' => 0,
+      'description' => 'Boolean which indicates if an infinite loop is desired for the animation.',
+    );
+    $schema['block']['fields']['animate_css_wow_duration'] = array(
+      'type' => 'float',
+      'not null' => TRUE,
+      'size' => 'medium',
+      'default' => -1,
+      'description' => 'Animation duration.',
+    );
+    $schema['block']['fields']['animate_css_wow_delay'] = array(
+      'type' => 'float',
+      'not null' => TRUE,
+      'size' => 'medium',
+      'default' => -1,
+      'description' => 'Animation delay.',
+    );
+    $schema['block']['fields']['animate_css_wow_offset'] = array(
+      'type' => 'int',
+      'not null' => TRUE,
+      'size' => 'small',
+      'default' => -1,
+      'description' => 'Animation offset.',
+    );
+    $schema['block']['fields']['animate_css_wow_iteration'] = array(
+      'type' => 'int',
+      'not null' => TRUE,
+      'size' => 'small',
+      'default' => -1,
+      'description' => 'Animation iteration.',
+    );
+  }
+}

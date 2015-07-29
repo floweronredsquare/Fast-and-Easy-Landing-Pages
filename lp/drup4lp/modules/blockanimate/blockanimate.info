@@ -1,0 +1,14 @@
+name = BlockAnimate
+description = Integrates CSS cross-browser animations from the Animate.css and WOW JS libraries with Drupal core's block configuration system.
+core = 7.x
+
+dependencies[] = block
+dependencies[] = animate_css
+dependencies[] = wowjs
+
+; Information added by Drupal.org packaging script on 2015-04-08
+version = "7.x-1.2"
+core = "7.x"
+project = "blockanimate"
+datestamp = "1428488283"
+

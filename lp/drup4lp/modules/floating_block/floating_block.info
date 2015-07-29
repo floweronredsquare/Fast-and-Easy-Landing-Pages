@@ -1,0 +1,14 @@
+; $Id:
+name = Floating Block
+description = Allows regions of the site to float
+core = 7.x
+configure = admin/config/user-interface/floating-block
+files[] = floating_block.module
+files[] = tests/floating_block.test
+
+; Information added by Drupal.org packaging script on 2015-07-02
+version = "7.x-1.3"
+core = "7.x"
+project = "floating_block"
+datestamp = "1435820441"
+

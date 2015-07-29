@@ -1,0 +1,28 @@
+<?php
+
+/**
+ * @file
+ * Install, update, and uninstall functions for the floating_block module.
+ */
+
+/**
+ * Implements hook_uninstall().
+ *
+ * Deletes any variables that might have been set by the module.
+ */
+function floating_block_uninstall() {
+  variable_del('floating_block_to_apply');
+  variable_del('floating_blocks');
+  variable_del('floating_block_min_width');
+}
+
+/**
+ * Change variable name from floating_block_to_apply to floating_blocks and migrate settings to new format.
+ */
+function floating_block_update_7000() {
+  module_load_include('inc', 'floating_block', 'floating_block.admin');
+  variable_set('floating_blocks', _floating_block_admin_convert_text_to_array(variable_get('floating_block_to_apply', '')));
+  variable_del('floating_block_to_apply');
+  // The configuration form has moved rebuild the menu.
+  menu_rebuild();
+}

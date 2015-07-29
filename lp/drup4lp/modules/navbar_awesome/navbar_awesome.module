@@ -1,0 +1,250 @@
+<?php
+
+/**
+ * @file
+ * Profile module that customizes navbar
+ */
+
+/**
+ * Implements hook_library_alter().
+ */
+function navbar_awesome_library_alter(&$libraries, $module) {
+  if ($module == 'navbar') {
+    // Remove navbar's icon CSS.
+    unset($libraries['navbar']['css'][2]);
+    // Add custom CSS to provide fix for using FontAwesome icons.
+    $libraries['navbar']['css'][] = drupal_get_path('module', 'navbar_awesome') . '/css/navbar-awesome.css';
+    // Add JS behaviors to handle icons for buttons added via JavaScript.
+    $libraries['navbar']['js'][drupal_get_path('module', 'navbar_awesome') . '/js/navbar-awesome.js'] = array();
+  }
+}
+
+/**
+ * Implementation of hook_libraries_info().
+ */
+function navbar_awesome_libraries_info() {
+  $libraries['fontawesome'] = array(
+    'name' => 'Font Awesome',
+    'vendor url' => 'http://fontawesome.io',
+    'download url' => 'https://github.com/FortAwesome/Font-Awesome/releases',
+    'path' => 'css',
+    'version' => '4.1.0', // @TODO: Move this into version_callback and version_arguments.
+    'files' => array(
+      'css' => array(
+        'font-awesome.min.css',
+      ),
+    ),
+    'variants' => array(
+      'minified' => array(
+        'files' => array(
+          'css' => array(
+            'font-awesome.min.css',
+          ),
+        ),
+      ),
+      'source' => array(
+        'files' => array(
+          'css' => array(
+            'font-awesome.css',
+          ),
+        ),
+      ),
+    ),
+  );
+  return $libraries;
+}
+
+/**
+ * Implements hook_menu().
+ */
+function navbar_awesome_menu() {
+  $items['admin/config/user-interface/navbar-awesome'] = array(
+    'title' => 'Navbar Awesome',
+    'description' => 'Configuration for Navbar Awesome',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('navbar_awesome_configuration'),
+    'access arguments' => array('administer site configuration'),
+    'file' => 'navbar_awesome.admin.inc',
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_page_alter().
+ */
+function navbar_awesome_page_alter(&$page) {
+
+  // First check if using Libraries to load Font Awesome
+  // @todo: Verify if other contribs are using same naming to prevent overlap.
+  if (module_exists('libraries') && ($library = libraries_detect('fontawesome')) && !empty($library['installed'])) {
+    // Load our library
+    libraries_load('fontawesome');
+  }
+  // If there isn't a library, use the CDN. This can be disabled in case a
+  // theme is providing FontAwesome via CDN and not libraries.
+  elseif (!variable_get('navbar_awesome_cdn', FALSE)) {
+    // Use super awesome CDN.
+    drupal_add_css('//maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css', array('type' => 'external'));
+  }
+
+  // Roboto for admin and toolbar.
+  // The font is enabled by default and can be disabled through the config form.
+  if (!variable_get('navbar_awesome_roboto', FALSE)) {
+    drupal_add_css('//fonts.googleapis.com/css?family=Roboto:400,400italic,300,500,700', array('group' => CSS_THEME, 'type' => 'external'));
+  }
+}
+
+/**
+ * Implements hook_navbar_alter().
+ */
+function navbar_awesome_navbar_alter(&$items) {
+  // Move the menu item to far left.
+  if (isset($items['administration'])) {
+    $items['administration']['#weight'] = -50;
+    $items['administration']['tab']['#options']['attributes']['class'][] = 'fa-bars';
+
+    // Cycle through the administrative menu.
+    // @todo: Creare a way to check what's been overridden via hook_navbar().
+    $administration_menu =& $items['administration']['tray']['navbar_administration']['administration_menu'];
+    foreach ($administration_menu as $key => $item) {
+      if (!isset($item['#href'])) {
+        continue;
+      }
+
+      // Bring Content up a level.
+      if ($item['#href'] == 'admin/content') {
+        unset($administration_menu[$key]);
+      }
+    }
+  }
+  // Add icon for home
+  if (isset($items['home'])) {
+    $items['home']['tab']['#options']['attributes']['class'][] = 'fa-home';
+  }
+  // Add icon for user
+  if (isset($items['user'])) {
+    $items['user']['tab']['#options']['attributes']['class'][] = 'fa-user';
+  }
+  // Add icon for Shortcuts
+  if (isset($items['shortcuts'])) {
+    $items['shortcuts']['tab']['#options']['attributes']['class'][] = 'fa-star';
+  }
+
+  // @todo: replace all default icons!
+  // @todo make options to move items up or down into main menu.
+}
+
+/**
+ * Implements hook_navbar().
+ *
+ * @todo: create way for this to be dynamic via a UI.
+ */
+function navbar_awesome_navbar() {
+  $items = array();
+
+  // Adds Content to top level
+  // @todo: maybe make this less static? Make it based off actual menu item in
+  //        the management menu?
+  if (user_access('administer nodes')) {
+    $items['content'] = array(
+      '#type' => 'navbar_item',
+      'tab' => array(
+        '#type' => 'link',
+        '#title' => t('Content'),
+        '#href' => 'admin/content',
+        '#options' => array(
+          'attributes' => array(
+            'title' => t('Content menu'),
+            'class' => array('navbar-icon', 'navbar-icon-content', 'fa-pencil-square-o'),
+          ),
+        ),
+      ),
+      '#weight' => -15,
+    );
+  }
+
+  // Add an item and tray for Development Menu
+  if (module_exists('devel') && user_access('access devel information') && variable_get('navbar_awesome_devel', TRUE)) {
+
+    $devel_tree = navbar_awesome_devel_menu_tree();
+    // Add attributes to the links before rendering.
+    _navbar_awesome_navigation_links($devel_tree);
+
+    $devel_menu = array(
+      '#heading' => t('Development menu'),
+      'navbar_administration' => array(
+        '#type' => 'container',
+        '#attributes' => array(
+          'class' => array('navbar-menu-development'),
+        ),
+        'adevelopment_menu' => menu_tree_output($devel_tree),
+      ),
+    );
+
+    $items['development'] = array(
+      '#type' => 'navbar_item',
+      'tab' => array(
+        '#type' => 'link',
+        '#title' => t('Development'),
+        '#href' => 'admin/settings',
+        '#options' => array(
+          'attributes' => array(
+            'title' => t('Development menu'),
+            'class' => array('navbar-icon', 'navbar-icon-devel', 'fa-bolt'),
+          ),
+        ),
+      ),
+      'tray' => $devel_menu,
+      '#weight' => 100,
+    );
+  }
+  return $items;
+}
+
+/**
+ * Ensures menu items have proper classes
+ *
+ * Navbar doesn't always apply 'navbar-menu-item' which screws up theming.
+ * This wraps the default tree processor and adds navbar-menu-item.
+ *
+ * @see navbar_menu_navigation_links()
+ */
+function _navbar_awesome_navigation_links(&$tree) {
+  navbar_menu_navigation_links($tree);
+
+  foreach ($tree as $key => $item) {
+    $tree[$key]['link']['localized_options']['attributes']['class'][] = 'navbar-menu-item';
+  }
+}
+
+/**
+ * Returns modified Development menu tree
+ *
+ * Devel provides a large amount of menu items, here we restrict them to a few
+ * of the useful ones.
+ *
+ * @todo: Allow this to be customized via UI.
+ */
+function navbar_awesome_devel_menu_tree() {
+  $tree = menu_tree_all_data('devel');
+
+  // @todo: Turn this array into config item.
+  $display = array(
+    'devel/cache/clear',
+    'devel/entity/info',
+    'devel/php',
+    'devel/menu/item',
+    'devel/reinstall',
+    'devel/theme/registry',
+  );
+
+  foreach ($tree as $key => $item) {
+    $link_path = $item['link']['link_path'];
+    if (!in_array($link_path, $display)) {
+      unset($tree[$key]);
+    }
+  }
+
+  return $tree;
+}

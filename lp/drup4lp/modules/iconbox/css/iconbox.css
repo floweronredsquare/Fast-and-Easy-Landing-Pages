@@ -1,0 +1,190 @@
+.iconbox-box {
+  position: relative;
+}
+.iconbox-padding {
+  padding: 20px;
+}
+.iconbox-icon .fa {
+  float: none;
+  margin: 0;
+  -webkit-transition: all 0.3s ease;
+  -moz-transition: all 0.3s ease;
+  -o-transition: all 0.3s ease;
+  transition: all 0.3s ease;
+  vertical-align: middle;
+  font-size: inherit;
+  color: inherit;
+}
+.iconbox-icon-position-top {
+  text-align: center;
+}
+.iconbox-icon-position-top .iconbox-icon {
+  margin-bottom: 20px;
+  clear: both;
+}
+.iconbox-icon-position-left {
+  text-align: left;
+}
+.iconbox-icon-position-left .iconbox-icon {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+.iconbox-icon-position-left.iconbox-padding .iconbox-icon {
+  left: 20px;
+  top: 20px;
+}
+.iconbox-icon-position-right {
+  text-align: right;
+}
+.iconbox-icon-position-right .iconbox-icon {
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+.iconbox-icon-position-right.iconbox-padding .iconbox-icon {
+  right: 20px;
+  top: 20px;
+}
+.iconbox-icon-position-boxcut {
+  text-align: center;
+}
+.iconbox-icon-position-boxcut .iconbox-icon {
+  margin-bottom: 20px;
+  clear: both;
+}
+
+.iconbox-icon .fa.iconbox-icon-style-circle {
+  -webkit-border-radius: 50%;
+  -moz-border-radius: 50%;
+  border-radius: 50%;
+  -moz-background-clip: padding;
+  -webkit-background-clip: padding-box;
+  background-clip: padding-box;
+  -moz-background-clip: inherit;
+  -webkit-background-clip: inherit;
+  background-clip: inherit;
+  text-align: center;
+}
+.iconbox-icon .fa.iconbox-icon-style-square {
+  -webkit-border-radius: 3px;
+  -moz-border-radius: 3px;
+  border-radius: 3px;
+  -moz-background-clip: padding;
+  -webkit-background-clip: padding-box;
+  background-clip: padding-box;
+  -moz-background-clip: inherit;
+  -webkit-background-clip: inherit;
+  background-clip: inherit;
+  text-align: center;
+}
+.iconbox-icon .fa.iconbox-icon-size-large {
+  font-size: 45px;
+}
+.iconbox-icon .fa.iconbox-icon-size-large.iconbox-icon-style-circle,
+.iconbox-icon .fa.iconbox-icon-size-large.iconbox-icon-style-square {
+  width: 75px;
+  height: 75px;
+  line-height: 75px;
+}
+.iconbox-icon .fa.iconbox-icon-size-medium {
+  font-size: 25px;
+}
+.iconbox-icon .fa.iconbox-icon-size-medium.iconbox-icon-style-circle,
+.iconbox-icon .fa.iconbox-icon-size-medium.iconbox-icon-style-square {
+  font-size: 20px;
+  width: 40px;
+  height: 40px;
+  line-height: 40px;
+}
+.iconbox-icon .fa.iconbox-icon-size-small {
+  font-size: 14px;
+}
+.iconbox-icon .fa.iconbox-icon-size-small.iconbox-icon-style-circle,
+.iconbox-icon .fa.iconbox-icon-size-small.iconbox-icon-style-square {
+  width: 25px;
+  height: 25px;
+  line-height: 25px;
+}
+
+/*--- grid layout ----*/
+.iconbox-grid {
+  padding: 0;
+  margin: 0;
+  width: 100%;
+  clear: both;
+}
+.iconbox-grid .iconbox-grid-inner {
+  margin: 0 0 0 -20px;
+}
+.iconbox-grid .iconbox-col {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  list-style-image: none;
+  float: left;
+  width: 100%;
+  clear: none;
+}
+.iconbox-grid .iconbox-col-inner {
+  margin: 0 0 20px 20px;
+}
+
+@media all and (min-width: 767px) and (max-width: 980px) {
+
+  .iconbox-grid-2 .iconbox-col {
+    width: 50%;
+  }
+  .iconbox-grid-3 .iconbox-col {
+    width: 50%;
+  }
+  .iconbox-grid-4 .iconbox-col {
+    width: 50%;
+  }
+  .iconbox-grid-5 .iconbox-col {
+    width: 33.33333333333333%;
+  }
+  .iconbox-grid-6 .iconbox-col {
+    width: 33.33333333333333%;
+  }
+  .iconbox-grid-7 .iconbox-col {
+    width: 33.33333333333333%;
+  }
+  .iconbox-grid-8 .iconbox-col {
+    width: 25%;
+  }
+
+  .iconbox-grid-2 .iconbox-col.col-odd, .iconbox-grid-3 .iconbox-col.col-odd, .iconbox-grid-4 .iconbox-col.col-odd {
+    clear: both;
+  }
+  .iconbox-grid-2 .col-odd.col-last, .iconbox-grid-3 .col-odd.col-last, .iconbox-grid-4 .col-odd.col-last {
+    width: 100%;
+  }
+}
+
+@media all and (min-width: 981px) {
+  .iconbox-grid-2 .iconbox-col {
+    width: 50%;
+  }
+  .iconbox-grid-3 .iconbox-col {
+    width: 33.33333333333333%;
+  }
+  .iconbox-grid-4 .iconbox-col {
+    width: 25%;
+  }
+  .iconbox-grid-5 .iconbox-col {
+    width: 20%;
+  }
+  .iconbox-grid-6 .iconbox-col {
+    width: 16.66666666666667%;
+  }
+  .iconbox-grid-7 .iconbox-col {
+    width: 14.28571428571429%;
+  }
+  .iconbox-grid-8 .iconbox-col {
+    width: 12.5%;
+  }
+  .iconbox-grid-2 .iconbox-col.col-odd {
+    clear: both;
+  }
+}

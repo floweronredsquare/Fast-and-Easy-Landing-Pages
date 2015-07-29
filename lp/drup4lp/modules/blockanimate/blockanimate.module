@@ -1,0 +1,428 @@
+<?php
+
+/**
+ * @file
+ * Add CSS3 cross-browser animation to any Drupal block.
+ *
+ * Block Animate allows users without HTML+CSS knowledge to easily
+ * add a CSS cross-browser animation to any block in their Drupal Sites
+ * from the Drupal core's block configuration interface.
+ * To make this happen, this module depends on the Animate CSS and WOW JS
+ * modules. These modules integrate the Animate CSS and WOW JS libraries
+ * into Drupal. This implementation is based on an alteration of the Drupal
+ * core's block database table to leverage the Drupal core's Block API
+ * functions, objects and structure.
+ */
+
+/**
+ * Implements hook_help().
+ */
+function blockanimate_help($path, $arg) {
+  switch ($path) {
+    case 'admin/help#blockanimate':
+      return blockanimate_get_help_message();
+  }
+}
+
+/**
+ * Implements hook_permission().
+ */
+function blockanimate_permission() {
+  return array(
+    'administer block animate' => array(
+      'title' => t('Configure Block Animate animations.'),
+      'description' => t("Configure Animate CSS animations for website's blocks."),
+    ),
+  );
+}
+
+/**
+ * Implements theme_preprocess_block().
+ */
+function blockanimate_preprocess_block(&$vars) {
+  $block = $vars['block'];
+  _blockanimate_add_js_classes_and_attributes($block, $vars);
+}
+
+/**
+ * Implements hook_preprocess_HOOK().
+ *
+ * Extend panel block's classes and attributes with animate css classes
+ * and attributes.
+ */
+function blockanimate_preprocess_panels_pane(&$vars) {
+  if ($vars['pane']->type != 'block') {
+    return;
+  }
+  // Infer the block's $module and $delta from the pane subtype.
+  $block_parts = explode('-', $vars['pane']->subtype);
+  // Load the block based on the block parts.
+  $block = block_load($block_parts[0], $block_parts[1]);
+  // Add a generic 'module type' pane class.
+  $vars['classes_array'][] = drupal_html_class('pane-' . $block->module);
+  _blockanimate_add_js_classes_and_attributes($block, $vars);
+}
+
+/**
+ * Extend block's classes and attributes.
+ *
+ * Extend block's classes with animate css classes and block's attributes with
+ * wow.js attributes. It adds the required Javascript file to create and
+ * initialize the WOW Javascript object.
+ */
+function _blockanimate_add_js_classes_and_attributes($block, &$vars) {
+  if (isset($block->animate_css_class) && ($block->animate_css_class != 'none') && ($block->animate_css_class != '')) {
+    // If an animation exists, we create and activate the WOW Javascript object.
+    $js_path = drupal_get_path('module', 'blockanimate') . '/js/blockanimate.js';
+    drupal_add_js($js_path);
+    // Add the wow attributes to the block attributes if needed.
+    $animate_attributes = _blockanimate_get_block_attributes($block);
+    $vars['attributes_array'] = array_merge($vars['attributes_array'], $animate_attributes);
+    // And add the Animate CSS classes to the block classes if needed.
+    $animate_classes = _blockanimate_get_block_classes($block);
+    $vars['classes_array'] = array_merge($vars['classes_array'], $animate_classes);
+  }
+}
+
+/**
+ * Implements hook_form_alter().
+ *
+ * Alter block edit form to add block's animate css and wow JS configuration
+ * fields.
+ */
+function blockanimate_form_alter(&$form, &$form_state, $form_id) {
+  if (user_access('administer block animate') && ($form_id == 'block_admin_configure' || $form_id == 'block_add_block_form')) {
+    // Load statically cached block object used to display the form.
+    $block = block_load($form['module']['#value'], $form['delta']['#value']);
+    _blockanimate_add_form_fieldset($form);
+    _blockanimate_add_form_animate_css_fields($form, $block);
+    _blockanimate_add_form_wow_js_fields($form, $block);
+    $form['#submit'][] = 'blockanimate_form_submit';
+  }
+}
+
+/**
+ * Helper function: adds a new fieldset to the block configuration form.
+ */
+function _blockanimate_add_form_fieldset(&$form) {
+  $form['settings']['animate_css'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Animate CSS Animation'),
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+  );
+}
+
+/**
+ * Helper function.
+ *
+ * Adds Animate CSS related fields to the block configuration form.
+ */
+function _blockanimate_add_form_animate_css_fields(&$form, $block) {
+  $form['settings']['animate_css']['animate_css_class'] = array(
+    '#type' => 'select',
+    '#title' => t('Select Animation'),
+    '#options' => _blockanimate_animation_types_form_options(),
+    '#default_value' => property_exists($block, 'animate_css_class') ? $block->animate_css_class : '',
+    '#description' => t('Select the Animate CSS animation you wish to apply to this block.'
+    ),
+  );
+  $form['settings']['animate_css']['animate_css_infinite'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Apply an infinite loop to this animation.'),
+    '#description' => t("This option can't be checked if you set the Animation iteration option."),
+    '#default_value' => property_exists($block, 'animate_css_infinite') ? $block->animate_css_infinite : '',
+    '#element_validate' => array(
+      'blockanimate_validate_infinite_loop_checkbox',
+    ),
+  );
+}
+
+/**
+ * Helper function: adds WOW JS related fields to the block configuration form.
+ */
+function _blockanimate_add_form_wow_js_fields(&$form, $block) {
+  $form['settings']['animate_css']['animate_css_wow_duration'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Animation Duration.'),
+    '#description' => t("Change the default animation's duration. Leave blank for default duration (1 second). Units: seconds. Example: 10 (seconds)"),
+    '#default_value' => property_exists($block, 'animate_css_wow_duration') ? ((floatval($block->animate_css_wow_duration) > 0) ?
+      $block->animate_css_wow_duration : '') : '',
+    '#field_suffix' => 'seconds',
+    '#element_validate' => array(
+      'blockanimate_validate_positive_float_field',
+    ),
+    '#prefix' => '<br/><h2>Advanced Options</h2>',
+  );
+  $form['settings']['animate_css']['animate_css_wow_delay'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Animation Delay.'),
+    '#description' => t("Change the default animation's delay. Leave blank for default delay (0 seconds). Units: seconds. Example: 5 (seconds)"),
+    '#default_value' => property_exists($block, 'animate_css_wow_delay') ? ((floatval($block->animate_css_wow_delay) > 0) ?
+      $block->animate_css_wow_delay : '') : '',
+    '#field_suffix' => 'seconds',
+    '#element_validate' => array(
+      'blockanimate_validate_positive_float_field',
+    ),
+  );
+  $form['settings']['animate_css']['animate_css_wow_offset'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Animation Offset.'),
+    '#description' => t("Change the default offset. Leave blank for default offset (0 pixels). Units: pixels. Example: 100 (pixels)"),
+    '#default_value' => property_exists($block, 'animate_css_wow_offset') ? ((intval($block->animate_css_wow_offset) > 0) ?
+      $block->animate_css_wow_offset : '') : '',
+    '#field_suffix' => 'pixels',
+    '#element_validate' => array('element_validate_integer_positive'),
+  );
+  $form['settings']['animate_css']['animate_css_wow_iteration'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Animation Iteration.'),
+    '#description' => t("Change the default number of animation iterations. Leave blank for default number of iterations (1 iteration). If you set this option, the 'Apply an infinite loop to this animation' can't be set. Units: number of iterations. Example: 2 (iterations)"),
+    '#default_value' => property_exists($block, 'animate_css_wow_iteration') ? ((intval($block->animate_css_wow_iteration) > 0) ?
+      $block->animate_css_wow_iteration : '') : '',
+    '#field_suffix' => 'iterations',
+    '#element_validate' => array('element_validate_integer_positive'),
+  );
+}
+
+/**
+ * Helper function: validates optional positive float form fields.
+ */
+function blockanimate_validate_positive_float_field($element, &$form_state, $form) {
+  $field_value = $element['#value'];
+  if (strlen($field_value) > 0) {
+    // The field is only validated when not left blank.
+    $is_not_numeric = !is_numeric($field_value);
+    $is_not_float_value = (strval(floatval($field_value)) != $field_value);
+    $is_not_positive = (floatval($field_value) <= 0);
+    if ($is_not_numeric || $is_not_float_value || $is_not_positive) {
+      form_error($element, t('@field_name This field must be a positive float number. Examples: 0.5, 2, 4.35', array(
+          '@field_name' => $element['#title'],
+        )
+      ));
+    }
+  }
+}
+
+/**
+ * Helper function.
+ *
+ * Validates the infinite loop checkbox. This option can't be
+ * checked if the Animate Iteration option is set.
+ */
+function blockanimate_validate_infinite_loop_checkbox($element, &$form_state, $form) {
+  $field_value = $element['#value'];
+  if ($field_value) {
+    $animate_css_iteration = $form_state['values']['animate_css_wow_iteration'];
+    if (strlen($animate_css_iteration) > 0) {
+      form_error($element, t("@field_name This option can't be checked when you set the Animation Iteration option.", array(
+          '@field_name' => $element['#title'],
+        )
+      ));
+    }
+  }
+}
+
+/**
+ * Helper function.
+ *
+ * Additional submit callback for block configuration pages.
+ * Save supplied block CSS classes and block attributes.
+ */
+function blockanimate_form_submit($form, &$form_state) {
+  $form_id = $form_state['values']['form_id'];
+  if ($form_id == 'block_admin_configure' || $form_id == 'block_add_block_form') {
+    $animate_css_class = $form_state['values']['animate_css_class'];
+    $animate_css_infinite = (($animate_css_class != 'none') && (strlen($form_state['values']['animate_css_wow_iteration']) == 0)) ?
+      $form_state['values']['animate_css_infinite'] : 0;
+    $animate_css_duration = _blockanimate_get_db_value_for_optional_field($animate_css_class,
+      $form_state['values']['animate_css_wow_duration']);
+    $animate_css_delay = _blockanimate_get_db_value_for_optional_field($animate_css_class,
+      $form_state['values']['animate_css_wow_delay']);
+    $animate_css_offset = _blockanimate_get_db_value_for_optional_field($animate_css_class,
+      $form_state['values']['animate_css_wow_offset']);
+    $animate_css_iteration = _blockanimate_get_db_value_for_optional_field($animate_css_class,
+      $form_state['values']['animate_css_wow_iteration']);
+    $field_values = array(
+      'animate_css_class' => $animate_css_class,
+      'animate_css_infinite' => $animate_css_infinite,
+      'animate_css_wow_duration' => $animate_css_duration,
+      'animate_css_wow_delay' => $animate_css_delay,
+      'animate_css_wow_offset' => $animate_css_offset,
+      'animate_css_wow_iteration' => $animate_css_iteration,
+    );
+    if (user_access('administer blocks') && !empty($field_values)) {
+      db_update('block')
+        ->fields($field_values)
+        ->condition('module', $form_state['values']['module'])
+        ->condition('delta', $form_state['values']['delta'])
+        ->execute();
+      // Flush all context module cache to use the updated block classes.
+      if (module_exists('context')) {
+        cache_clear_all('context', 'cache', TRUE);
+      }
+    }
+  }
+}
+
+/**
+ * Helper function.
+ *
+ * Returns value to store in DB for optional field.
+ */
+function _blockanimate_get_db_value_for_optional_field($animate_css_class, $field_value) {
+  return (($animate_css_class != 'none') && (strlen($field_value) > 0)) ?
+    $field_value : -1;
+}
+
+/**
+ * Helper function.
+ *
+ * Returns an array of Animate CSS classes for a block which
+ * has an animation associated to.
+ */
+function _blockanimate_get_block_classes($block) {
+  if ($block->animate_css_infinite) {
+    $animate_classes = array(
+      'animated',
+      'infinite',
+      'wow',
+      check_plain($block->animate_css_class),
+    );
+  }
+  else {
+    $animate_classes = array(
+      'animated',
+      'wow',
+      check_plain($block->animate_css_class),
+    );
+  }
+  return $animate_classes;
+}
+
+/**
+ * Helper function.
+ *
+ * Returns an array of WOW Javascript attributes for a block
+ * which has an animation associated to.
+ */
+function _blockanimate_get_block_attributes($block) {
+  $block_attributes = array();
+  if ($block->animate_css_wow_duration != (-1)) {
+    $block_attributes['data-wow-duration'] = check_plain($block->animate_css_wow_duration) . 's';
+  }
+  if ($block->animate_css_wow_delay != (-1)) {
+    $block_attributes['data-wow-delay'] = check_plain($block->animate_css_wow_delay) . 's';
+  }
+  if ($block->animate_css_wow_offset != (-1)) {
+    $block_attributes['data-wow-offset'] = check_plain($block->animate_css_wow_offset);
+  }
+  if ($block->animate_css_wow_iteration != (-1)) {
+    $block_attributes['data-wow-iteration'] = check_plain($block->animate_css_wow_iteration);
+  }
+  return $block_attributes;
+}
+
+/**
+ * Helper function.
+ *
+ * Returns the Animate CSS animation effects the user can
+ * select from the select list in the block's configuration page.
+ */
+function _blockanimate_animation_types_form_options() {
+  return array(
+    'none'   => t('-- No animation --'),
+    'bounce' => t('Bounce'),
+    'flash'  => t('Flash'),
+    'pulse'  => t('Pulse'),
+    'rubberBand' => t('Rubber Band'),
+    'shake' => t('Shake'),
+    'swing' => t('Swing'),
+    'tada' => t('Tada'),
+    'wobble' => t('Wobble'),
+    'bounceIn' => t('Bounce In'),
+    'bounceInDown' => t('Bounce In Down'),
+    'bounceInLeft' => t('Bounce In Left'),
+    'bounceInRight' => t('Bounce In Right'),
+    'bounceInUp' => t('Bounce In Up'),
+    'bounceOut' => t('Bounce Out'),
+    'bounceOutDown' => t('Bounce Out Down'),
+    'bounceOutLeft' => t('Bounce Out Left'),
+    'bounceOutRight' => t('Bounce Out Right'),
+    'bounceOutUp' => t('Bounce Out Up'),
+    'fadeIn' => t('Fade In'),
+    'fadeInDown' => t('Fade In Down'),
+    'fadeInDownBig' => t('Fade In Down Big'),
+    'fadeInLeft' => t('Fade In Left'),
+    'fadeInLeftBig' => t('Fade In Left Big'),
+    'fadeInRight' => t('Fade In Right'),
+    'fadeInRightBig' => t('Fade In Right Big'),
+    'fadeInUp' => t('Fade In Up'),
+    'fadeInUpBig' => t('Fade In Up Big'),
+    'fadeOut' => t('Fade Out'),
+    'fadeOutDown' => t('Fade Out Down'),
+    'fadeOutDownBig' => t('Fade Out Down Big'),
+    'fadeOutLeft' => t('Fade Out Left'),
+    'fadeOutLeftBig' => t('Fade Out Left Big'),
+    'fadeOutRight' => t('Fade Out Right'),
+    'fadeOutRightBig' => t('Fade Out Right Big'),
+    'fadeOutUp' => t('Fade Out Up'),
+    'fadeOutUpBig' => t('Fade Out Up Big'),
+    'flipInX' => t('Flip In X'),
+    'flipInY' => t('Flip In Y'),
+    'flipOutX' => t('Flip Out X'),
+    'flipOutY' => t('Flip Out Y'),
+    'lightSpeedIn' => t('Light Speed In'),
+    'lightSpeedOut' => t('Light Speed Out'),
+    'rotateIn' => t('Rotate In'),
+    'rotateInDownLeft' => t('Rotate In Down Left'),
+    'rotateInDownRight' => t('Rotate In Down Right'),
+    'rotateInUpLeft' => t('Rotate In Up Left'),
+    'rotateInUpRight' => t('Rotate In Up Right'),
+    'rotateOut' => t('Rotate Out'),
+    'rotateOutDownLeft' => t('Rotate Out Down Left'),
+    'rotateOutDownRight' => t('Rotate Out Down Right'),
+    'rotateOutUpLeft' => t('Rotate Out Up Left'),
+    'rotateOutUpRight' => t('Rotate Out Up Right'),
+    'hinge' => t('Hinge'),
+    'rollIn' => t('Roll In'),
+    'rollOut' => t('Roll Out'),
+    'zoomIn' => t('Zoon In'),
+    'zoomInDown' => t('Zoom In Down'),
+    'zoomInLeft' => t('Zoom In Left'),
+    'zoomInRight' => t('Zoom In Right'),
+    'zoomInUp' => t('Zoom In Up'),
+    'zoomOut' => t('Zoom Out'),
+    'zoomOutDown' => t('Zoom Out Down'),
+    'zoomOutLeft' => t('Zoom Out Left'),
+    'zoomOutRight' => t('Zoom Out Right'),
+    'zoomOutUp' => t('Zoom Out Up'),
+    'slideInDown' => t('Slide In Down'),
+    'slideInLeft' => t('Slide In Left'),
+    'slideInRight' => t('Slide In Right'),
+    'slideInUp' => t('Slide In Up'),
+    'slideOutDown' => t('Slide Out Down'),
+    'slideOutLeft' => t('Slide Out Left'),
+    'slideOutRight' => t('Slide Out Right'),
+    'slideOutUp' => t('Slide Out Up'),
+  );
+}
+
+/**
+ * Helper function.
+ *
+ * Returns the modules' help text for Drupal's administration
+ * help section.
+ */
+function blockanimate_get_help_message() {
+  $message = '<p>';
+  $message .= t("The Block Animate module adds a new fieldset with a few new options to Drupal's block configuration form. Using these options you can set an animation for each of your website's blocks, the animation duration, the number of times the animation will be executed, and so on.");
+  $message .= '</p>';
+  $message .= '<p>';
+  $message .= t("These animations are provided by the Animate CSS library. There is a lot of different animations available to choose from. These animations are CSS3 animations, so they're cross browser animations.");
+  $message .= '</p>';
+  $message .= '<p>';
+  $message .= t("This module uses the WOW Javascript library too. Thanks to this library, these animations are shown when the blocks become visible as you scroll down the page.");
+  $message .= '</p>';
+  return $message;
+}

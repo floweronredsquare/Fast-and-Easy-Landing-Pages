@@ -1,0 +1,49 @@
+<?php
+
+/**
+ * @file
+ * Drupal integration with Animate.css, bunch of cool, fun, and cross-browser animations for you to use in your projects.
+ */
+
+/**
+ * Implements hook_help().
+ */
+function animate_css_help($path, $arg) {
+  switch ($path) {
+  case 'admin/help#animate':
+    return '<p>' . t('<a href="@animate">Animate</a> is a bunch of cool, fun, and cross-browser animations for you to use in your projects.', array(
+      '@animate' => 'http://daneden.me/animate/',
+    )) . '</p>';
+  }
+}
+
+/**
+ * Implements hook_init().
+ */
+function animate_css_init() {
+  // Load up the Animate CSS file.
+  drupal_load('module', 'libraries');
+  libraries_load('animate');
+}
+
+/**
+ * Implements hook_libraries_info().
+ */
+function animate_css_libraries_info() {
+  $libraries['animate'] = array(
+    'name' => 'animate',
+    'vendor url' => 'http://daneden.me/animate/',
+    'download url' => 'https://github.com/daneden/animate.css/archive/master.zip',
+    'version arguments' => array(
+      'file' => 'bower.json',
+      'pattern' => '/((?:\d+\.?){2,3})/',
+    ),
+    'files' => array(
+      'css' => array(
+        'animate.css',
+      ),
+    ),
+  );
+
+  return $libraries;
+}

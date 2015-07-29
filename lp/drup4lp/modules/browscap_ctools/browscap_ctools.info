@@ -1,0 +1,12 @@
+name = Browscap Ctools
+description = Chaos Tools plugins for Browscap. Provides an access control rule for Panel panes.
+core = 7.x
+dependencies[] = browscap
+dependencies[] = ctools
+
+; Information added by drupal.org packaging script on 2012-07-13
+version = "7.x-1.0"
+core = "7.x"
+project = "browscap_ctools"
+datestamp = "1342203681"
+

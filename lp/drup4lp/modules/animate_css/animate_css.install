@@ -1,0 +1,27 @@
+<?php
+
+/**
+ * @file
+ * Requirements page for Animate Css.
+ */
+
+/**
+ * Implements hook_requirements().
+ */
+function animate_css_requirements($phase) {
+  $requirements = array();
+
+  // Report the version of Animate.
+  if ($phase == 'runtime') {
+    // Make sure Libraries is loaded before loading Animate.
+    drupal_load('module', 'libraries');
+    $animate = libraries_detect('animate');
+    $requirements['animate'] = array(
+      'title' => $animate['name'],
+      'severity' => $animate['installed'] ? REQUIREMENT_OK : REQUIREMENT_WARNING,
+      'value' => $animate['installed'] ? $animate['version'] : $animate['error message'],
+    );
+  }
+
+  return $requirements;
+}

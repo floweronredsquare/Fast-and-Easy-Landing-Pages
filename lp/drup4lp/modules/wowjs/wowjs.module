@@ -1,0 +1,223 @@
+<?php
+
+/**
+ * @file
+ * Drupal integration with wow.js javascript library.
+ */
+
+define('WOWJS_VENDOR_URL', 'http://mynameismatthieu.com/WOW');
+define('WOWJS_DOWNLOAD_URL', 'https://github.com/matthieua/WOW/archive/master.zip');
+define('WOWJS_ANIMATE_CSS_URL', 'https://www.drupal.org/project/animate_css');
+define('WOWJS_ANIMATE_CSS_WEBPAGE_URL', 'http://daneden.github.io/animate.css/');
+define('WOWJS_LEARN_ANIMATE_URL', 'https://github.com/daneden/animate.css');
+define('WOWJS_LEARN_WOWJS_URL', 'http://mynameismatthieu.com/WOW/docs.html');
+
+/**
+ * Implements hook_help().
+ */
+function wowjs_help($path, $arg) {
+  switch ($path) {
+    case 'admin/help#wowjs':
+      return _wowjs_get_help_message();
+  }
+}
+
+/**
+ * Implements hook_page_build().
+ */
+function wowjs_page_build(&$page) {
+  global $theme;
+
+  // Load up the WOWJS library on desired pages.
+  $current_theme = $theme;
+  $pages_variable_name = 'wowjs_' . $current_theme . '_pages';
+  $visibility_variable_name = 'wowjs_' . $current_theme . '_visibility';
+  $wowjs_pages = drupal_strtolower(variable_get($pages_variable_name, ''));
+  $wowjs_visibility = variable_get($visibility_variable_name, BLOCK_VISIBILITY_NOTLISTED);
+  if (!empty($wowjs_pages)) {
+    if ($wowjs_visibility < BLOCK_VISIBILITY_PHP) {
+      // We only load the library on desired pages for this theme.
+      $path = drupal_strtolower(drupal_get_path_alias($_GET['q']));
+      // Compare the lowercase internal and lowercase path alias (if any).
+      $page_match = drupal_match_path($path, $wowjs_pages);
+      if ($path != $_GET['q']) {
+        $page_match = $page_match || drupal_match_path($_GET['q'], $wowjs_pages);
+      }
+      // When $block->visibility has a value of 0 (BLOCK_VISIBILITY_NOTLISTED),
+      // the wow.js library is loaded on all pages except those listed in
+      // $wowjs_pages. When set to 1 (BLOCK_VISIBILITY_LISTED), it is
+      // displayed only on those pages listed in $wowjs_pages.
+      $page_match = !($wowjs_visibility xor $page_match);
+    }
+    elseif (module_exists('php')) {
+      $page_match = php_eval($wowjs_pages);
+    }
+    else {
+      $page_match = FALSE;
+    }
+  }
+  else {
+    // There is no page configuration for theme.
+    $page_match = ($wowjs_visibility == BLOCK_VISIBILITY_NOTLISTED);
+  }
+  if ($page_match) {
+    // There is a match. We load the wow.js library.
+    libraries_load('wow');
+  }
+
+}
+
+/**
+ * Implements hook_libraries_info().
+ */
+function wowjs_libraries_info() {
+  $libraries['wow'] = array(
+    'name' => 'wow',
+    'vendor url' => WOWJS_VENDOR_URL,
+    'download url' => WOWJS_DOWNLOAD_URL,
+    'version arguments' => array(
+      'file' => 'package.json',
+      'pattern' => '/((?:\d+\.?){2,3})/',
+    ),
+    'files' => array(
+      'js' => array(
+        'dist/wow.min.js',
+      ),
+    ),
+    'variants' => array(
+      'minified' => array(
+        'files' => array(
+          'js' => array(
+            'dist/wow.min.js',
+          ),
+        ),
+      ),
+      'source' => array(
+        'files' => array(
+          'js' => array(
+            'dist/wow.js',
+          ),
+        ),
+      ),
+    ),
+  );
+
+  return $libraries;
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter() for system_theme_settings().
+ *
+ * Add a new configuration option to each theme's configuration page to set the
+ * pages where the wow.js library will be loaded. The library will be loaded in
+ * every page by default.
+ */
+function wowjs_form_system_theme_settings_alter(&$form, &$form_state) {
+  if (isset($form_state['build_info']['args'][0]) && ($theme = $form_state['build_info']['args'][0])) {
+    $form['wowjs'] = array(
+      '#title' => t('WOW Javascript library'),
+      '#type' => 'fieldset',
+      '#weight' => 30,
+      '#collapsible' => TRUE,
+      '#collapsed' => FALSE,
+    );
+    $form['wowjs_theme'] = array('#type' => 'value', '#value' => $theme);
+    $visibility_default = variable_get('wowjs_' . $theme . '_visibility', BLOCK_VISIBILITY_NOTLISTED);
+    $pages_default = variable_get('wowjs_' . $theme . '_pages', '');
+    $access = user_access('use PHP for settings');
+    if ($visibility_default == BLOCK_VISIBILITY_PHP && !$access) {
+      $form['wowjs']['wowjs_visibility'] = array(
+        '#type' => 'value',
+        '#value' => BLOCK_VISIBILITY_PHP,
+      );
+      $form['wowjs']['wowjs_pages'] = array(
+        '#type' => 'value',
+        '#value' => $pages_default,
+      );
+    }
+    else {
+      $options = array(
+        BLOCK_VISIBILITY_NOTLISTED => t('All pages except those listed'),
+        BLOCK_VISIBILITY_LISTED => t('Only the listed pages'),
+      );
+      $description = t("Specify pages where the wow.js will be loaded by using their paths. Enter one path per line. The '*' character is a wildcard. Example paths are %blog for the blog page and %blog-wildcard for every personal blog. %front is the front page.", array(
+        '%blog' => 'blog',
+        '%blog-wildcard' => 'blog/*',
+        '%front' => '<front>',
+      ));
+
+      if (module_exists('php') && $access) {
+        $options += array(BLOCK_VISIBILITY_PHP => t('Pages on which this PHP code returns <code>TRUE</code> (experts only)'));
+        $title = t('Pages where wow.js library will be loaded (or PHP code)');
+        $description .= ' ' . t('If the PHP option is chosen, enter PHP code between %php. Note that executing incorrect PHP code can break your Drupal site.', array('%php' => '<?php ?>'));
+      }
+      else {
+        $title = t('Pages where wow.js library will be loaded');
+      }
+      $form['wowjs']['wowjs_visibility'] = array(
+        '#type' => 'radios',
+        '#title' => t('Load wow.js library on specific pages'),
+        '#options' => $options,
+        '#default_value' => $visibility_default,
+      );
+
+      $form['wowjs']['wowjs_pages'] = array(
+        '#title' => $title,
+        '#type' => 'textarea',
+        '#description' => $description,
+        '#default_value' => $pages_default,
+      );
+    }
+
+    $form['#submit'][] = 'wowjs_form_system_theme_settings_submit';
+  }
+}
+
+/**
+ * Form submission handler for wowjs_form_system_theme_settings_alter().
+ */
+function wowjs_form_system_theme_settings_submit($form, &$form_state) {
+  $theme = $form_state['values']['wowjs_theme'];
+  $wowjs_pages = $form_state['values']['wowjs_pages'];
+  $wowjs_visibility = $form_state['values']['wowjs_visibility'];
+  variable_set('wowjs_' . $theme . '_pages', $wowjs_pages);
+  variable_set('wowjs_' . $theme . '_visibility', $wowjs_visibility);
+}
+
+/**
+ * Helper function. Returns the help message.
+ */
+function _wowjs_get_help_message() {
+  $message = '<p>' . t("The WOWJS module integrates the <a href='@wowjs_link' target='_blank' title='Click here to visit wow.js libray website.'>wow.js library</a> into Drupal.", array("@wowjs_link" => WOWJS_VENDOR_URL));
+  $message .= t("WOW is a Javascript library which works nicely with the <a href='@animate_css_link' target='_blank' title='Click here to visit Animate CSS Drupal project.'>Animate CSS library</a> to create great cross browser CSS3-based animations in your Drupal sites.", array("@animate_css_link" => WOWJS_ANIMATE_CSS_URL));
+  $message .= '</p>';
+  $message .= '<p>';
+  $message .= t("The <a href='@animate_css_link' target='_blank' title='Click here to visit Animate CSS Drupal project.'>Animate CSS library</a> provides a complete set of CSS3 animations you can apply to any HTML element in your Drupal site using some JQuery code or providing some CSS classes on your templates for the HTML elements you want to animate. You can see this animations in action in the <a href='@animate_css_website_link' target='_blank' title='Click here to visit Animate CSS website.'>Animate CSS library's webpage</a>.", array(
+    "@animate_css_link" => WOWJS_ANIMATE_CSS_URL,
+    "@animate_css_website_link" => WOWJS_ANIMATE_CSS_WEBPAGE_URL,
+  ));
+  $message .= '</p>';
+  $message .= '<p>';
+  $message .= t("The <a href='@wowjs_link' target='_blank' title='Click here to visit the wow.js library website'>wow.js library</a> provides more control over those animations, letting you to set how many times an animation will be repeated, how much time the animation will last, how much time the animation will delay until it will start, etc.", array("@wowjs_link" => WOWJS_VENDOR_URL));
+  $message .= '</p>';
+  $message .= '<p>';
+  $message .= t("The wow.js library provides another nice feature: if you use the Animate CSS library only and you set an animation for an HTML element which is outside the fold, when you scroll down the page to see that HTML element, the CSS animation will probably have finished. Using the wow.js library with the Animate CSS library, the CSS animations of the HTML elements will start when those elements become visible as you scroll down the page. You can see a demo in the <a href='@wowjs_link' target='_blank' title='Click here to visit the wow.js library website'>wow.js librarys's home page</a>.", array("@wowjs_link" => WOWJS_VENDOR_URL));
+  $message .= '</p>';
+  $message .= '<p>';
+  $message .= t("Don't forget to clear Drupal's caches. By default, this module will load the wow.js library on every page of your website. If you only want to load the wow.js library in certain pages, go to your theme's configuration settings page and provide the list of pages where you want the wow.js library to be loaded (or not loaded). This module integrates with Drupal's core PHP filter module, so you can load the wow.js library on those pages where certain PHP expression returns true.");
+  $message .= '</p>';
+  $message .= '<h2>Resources</h2>';
+  $message .= '<p>';
+  $message .= '<ul>';
+  $message .= '<li>';
+  $message .= t("<a href='@learn_animate_url' target='_blank' title='Learn how to use the Animate CSS library'>Learn how to use the Animate CSS library</a>.",
+    array("@learn_animate_url" => WOWJS_LEARN_ANIMATE_URL));
+  $message .= '</li>';
+  $message .= '<li>';
+  $message .= t("<a href='@learn_wowjs_url' target='_blank' title='Learn how to use the WOW Javascript library'>Learn how to use the WOW Javascript library</a>.",
+    array("@learn_wowjs_url" => WOWJS_LEARN_WOWJS_URL));
+  $message .= '</li>';
+  $message .= '</ul>';
+  $message .= '</p>';
+  return $message;
+}

@@ -1,0 +1,94 @@
+/**
+ * Implement some UI stuff.
+ */
+#navbar-administration {
+    /* Material Design Typographic font.
+     * @link: http://www.google.com/design/spec/style/typography.html
+     */
+    font-family: 'Roboto', sans-serif;
+}
+#navbar-administration .navbar-bar {
+    /* Material Design: Blue Grey 500
+     * @link: http://www.google.com/design/spec/style/color.html#color-ui-color-palette
+     */
+    background-color: #607d8b;
+}
+#navbar-administration .navbar-bar a {
+    -webkit-transition: color 0.2s ease-in;
+    -moz-transition: color 0.2s ease-in;
+    -o-transition: color 0.2s ease-in;
+    transition: color 0.2s ease-in;
+}
+
+/**
+ * Icons
+ */
+#navbar-administration *:before, #navbar-administration *:after {
+    font-weight: 100;
+}
+#navbar-administration .navbar-icon {
+    line-height: 1.5;
+}
+#navbar-administration .navbar-icon:before {
+    display: inline-block;
+    position: relative;
+    right: 7px;
+    top: 2px;
+    font-family: FontAwesome;
+    font-size: 18px;
+    font-style: normal;
+    font-weight: normal;
+    line-height: 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/**
+ * Orientation toggle.
+ */
+#navbar-administration .navbar-toggle-orientation button {
+    height: 16px;
+    padding: 0;
+    width: 20px;
+    color: #607d8b;
+}
+#navbar-administration .navbar-toggle-orientation button:before {
+    left: -3px;
+    top: 0;
+}
+
+/**
+ * Handle.
+ */
+#navbar-administration .navbar-icon.navbar-handle {
+    width: 3em;
+    height: 0px;
+    top: 8px;
+    color: #607d8b;
+}
+
+/**
+ * Media queries to adjust icon display on mobile and up.
+ */
+@media only screen and (min-width: 16.5em) {
+    #navbar-administration .navbar-bar .navbar-icon {
+        width: 40px;
+        overflow: hidden;
+        height: 40px;
+    }
+    #navbar-administration .navbar-bar .navbar-icon:before {
+        top: -3px;
+        font-size: 24px;
+    }
+}
+@media only screen and (min-width: 36em) {
+    #navbar-administration .navbar-bar .navbar-icon {
+        width: auto;
+        overflow: visible;
+        height: 100%;
+    }
+    #navbar-administration .navbar-bar .navbar-icon:before {
+        top: 2px;
+        font-size: 18px;
+    }
+}

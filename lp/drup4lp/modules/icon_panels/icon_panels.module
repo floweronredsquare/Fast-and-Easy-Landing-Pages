@@ -1,0 +1,173 @@
+<?php
+
+/**
+ * @file
+ * Provides icon integration with panel panes.
+ */
+
+/**
+ * Implements hook_panels_get_pane_links().
+ */
+function icon_panels_get_pane_links_alter(&$links, $pane, $content_type) {
+  if (!empty($links['top']['css']['title'])) {
+    $links['top']['css']['title'] = t('CSS and Icon properties');
+  }
+}
+
+/**
+ * Implements hook_permission().
+ */
+function icon_panels_permission() {
+  return array(
+    'administer panels icons' => array(
+      'title' => t('Administer panels icons'),
+      'description' => t('Grants selected roles the ability to administer icons in panel panes.'),
+    ),
+  );
+}
+
+/**
+ * Helper function to return the default icon panels pane values.
+ */
+function icon_panels_defaults() {
+  return array(
+    'icon' => '',
+    'position' => 'title_before',
+    'bundle' => '',
+  );
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function icon_panels_form_panels_edit_configure_pane_css_form_alter(&$form, &$form_state, $form_id) {
+  $form['next']['#weight'] = 1000;
+  $access = user_access('administer icons') || user_access('administer panels icons');
+
+  $display = &$form_state['display'];
+  $pane = &$form_state['pane'];
+
+  $settings = array_merge(icon_panels_defaults(), isset($pane->css['icon']) ? (array) $pane->css['icon'] : array());
+  // Add an icon selector input element.
+  $form['settings']['icon_selector'] = array(
+    '#access' => $access,
+    '#type' => 'icon_selector',
+    '#default_bundle' => $settings['bundle'],
+    '#default_icon' => $settings['icon'],
+  );
+  // Additional configuration on where to place the icon in the block.
+  $icon_state = array('invisible' => array(':input[name="icon_selector[icon]"]' => array('value' => '')));
+  $form['settings']['icon_selector']['position'] = array(
+    '#access' => $access,
+    '#type' => 'select',
+    '#title' => t('Position'),
+    '#options' => array(
+      'title_before' => t('Before title'),
+      'title_after' => t('After title'),
+      'title_inside_before' => t('Before title (inside markup)'),
+      'title_inside_after' => t('After title (inside markup)'),
+      'content_before' => t('Before content'),
+      'content_after' => t('After content'),
+    ),
+    '#default_value' => $settings['position'],
+    '#states' => $icon_state,
+  );
+  $form['#submit'][] = 'icon_panels_form_panels_edit_configure_pane_css_form_submit';
+
+}
+
+/**
+ * FAPI submission function for the icon configure form.
+ *
+ * All this does is set up $pane properly. The caller is responsible for
+ * actually storing this somewhere.
+ */
+function icon_panels_form_panels_edit_configure_pane_css_form_submit($form, &$form_state) {
+  $pane = &$form_state['pane'];
+
+  if (isset($form_state['values']['icon_selector'])) {
+    // Add icon settings to the css setting to avoid complicated settings save.
+    $pane->css['icon'] = $form_state['values']['icon_selector'];
+  }
+}
+
+
+/**
+ * Implements hook_preprocess_HOOK().
+ */
+function icon_panels_preprocess_panels_pane(&$variables) {
+  $pane = $variables['pane'];
+  $settings = array_merge(icon_panels_defaults(), isset($pane->css['icon']) ? (array) $pane->css['icon'] : array());
+  if (!empty($settings['bundle']) && !empty($settings['icon'])) {
+
+    $icon = theme('icon',
+      array(
+        'bundle' => $settings['bundle'],
+        'icon' => $settings['icon'],
+      )
+    );
+
+    if ($icon) {
+      $prefixed_icon = '<span class="icon-wrapper">' . $icon . '</span>';
+      $variables['classes_array'][] = 'has-icon';
+      $variables['classes_array'][] = 'icon-' . str_replace('_', '-', $settings['position']);
+      switch ($settings['position']) {
+        case 'title_before':
+          $variables['title_prefix'][] = array('#markup' => $prefixed_icon);
+          break;
+
+        case 'title_after':
+          $variables['title_suffix'][] = array('#markup' => $prefixed_icon);
+          break;
+
+        case 'title_inside_before':
+          if ('page_title' == $pane->subtype) {
+            $variables['content'] = $prefixed_icon . $variables['content'];
+          }
+          else {
+            $variables['title'] = $prefixed_icon . $variables['title'];
+          }
+          break;
+
+        case 'title_inside_after':
+          if ('page_title' == $pane->subtype) {
+            $variables['content'] = $variables['content'] . $prefixed_icon;
+          }
+          else {
+            $variables['title'] .= $prefixed_icon;
+          }
+          break;
+
+        case 'content_before':
+          if ('page_title' == $pane->subtype) {
+            $variables['content'] = $prefixed_icon . $variables['content'];
+          }
+          else {
+            $variables['content'] = array(
+              'icon' => array(
+                'icon' => array('#markup' => $prefixed_icon),
+                '#weight' => -100,
+              ),
+              'content' => $variables['content'],
+            );
+          }
+          break;
+
+        case 'content_after':
+          if ('page_title' == $pane->subtype) {
+            $variables['content'] = $prefixed_icon . $variables['content'];
+          }
+          else {
+            $variables['content'] = array(
+              'content' => $variables['content'],
+              'icon' => array(
+                'icon' => array('#markup' => $prefixed_icon),
+                '#weight' => 1000,
+              ),
+            );
+          }
+          break;
+      }
+    }
+  }
+}

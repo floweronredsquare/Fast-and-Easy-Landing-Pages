@@ -1,0 +1,12 @@
+name = WOWJS
+description = Integrates wow.js library into Drupal.
+core = 7.x
+
+dependencies[] = libraries (>=7.x-2.0)
+
+; Information added by Drupal.org packaging script on 2015-06-23
+version = "7.x-1.2"
+core = "7.x"
+project = "wowjs"
+datestamp = "1435098142"
+

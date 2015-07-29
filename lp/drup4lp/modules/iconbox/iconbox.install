@@ -1,0 +1,115 @@
+<?php
+/**
+ * @file
+ * Install, update and uninstall functions for the iconbox module.
+ */
+
+/**
+ * Implements hook_requirements().
+ */
+function iconbox_requirements($phase) {
+  $requirements = array();
+  $t = get_t();
+
+  // Report the version of Font Awesome.
+  $library = libraries_detect('fontawesome');
+  
+  if ($phase == 'runtime') {
+    $fontawesome = libraries_detect('fontawesome');
+    $requirements['fontawesome'] = array(
+      'title' => $fontawesome['name'],
+      'severity' => $fontawesome['installed'] ? REQUIREMENT_OK : REQUIREMENT_ERROR,
+      'value' => $fontawesome['installed'] ? $fontawesome['version'] : $fontawesome['error message'],
+    );
+  }
+
+  return $requirements;
+}
+
+/**
+ * Implements hook_schema().
+ */
+function iconbox_schema() {
+  $schema['iconbox'] = array(
+    'description' => 'Holds definitions for top-level iconbox.',
+    'fields' => array(
+      'iconbox_name' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Primary Key: Unique key for iconbox.',
+      ),
+      'title' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'iconbox title displayed at top of block.',
+        'translatable' => TRUE,
+      ),
+      'optionset' => array(
+        'description' => 'The options array.',
+        'type' => 'blob',
+        'size' => 'big',
+        'serialize' => TRUE,
+      ),
+    ),
+    'primary key' => array('iconbox_name'),
+  );
+
+  $schema['iconbox_box'] = array(
+    'description' => 'Contains the individual box within a iconbox.',
+    'fields' => array(
+      'iconbox_name' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'The iconbox name. All box with the same iconbox name are part of the same iconbox.',
+      ),
+      'boxid' => array(
+        'description' => 'The iconbox box ID (boxid) is the integer primary key.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'box_title' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'The text displayed for the box, which may be modified by a title callback.',
+        'translatable' => TRUE,
+      ),
+      'weight' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Box weight among boxes in the same iconbox at the same depth.',
+      ),
+      'fontawesome_icon' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+        'default' => '',
+        'description' => 'Font Awesome icon.',
+      ),
+      'box_content' => array(
+        'type' => 'text',
+        'not null' => FALSE,
+        'description' => 'Box content.',
+        'translatable' => TRUE,
+      ),
+    ),
+    'primary key' => array('boxid'),
+  );
+
+  return $schema;
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function iconbox_uninstall() {
+}

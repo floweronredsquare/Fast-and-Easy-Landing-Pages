@@ -1,0 +1,196 @@
+<?php
+/**
+* @file
+* Basic Module file.
+*
+*/
+
+/**
+ * Implements hook_init().
+ */
+
+function parallax_bg_init() {
+  $module_path = drupal_get_path('module', 'parallax_bg');
+  $settings = variable_get('parallax_bg_settings');
+  if (isset($settings['triggers_fieldset'])) {
+    $js_vars = drupal_json_encode($settings['triggers_fieldset']);
+    drupal_add_js(array(
+      'parallax_bg' => $settings,
+    ),
+    'setting');
+    drupal_add_js($module_path . '/parallax_bg.js');
+    drupal_add_js($module_path . '/js/jquery.scrollTo.js');
+    drupal_add_js($module_path . '/js/jquery.parallax.js');
+  }
+}
+
+/**
+* Implementation of hook_menu().
+*/
+function parallax_bg_menu() {
+  // Admin settings.
+  $items['admin/config/user-interface/parallax_bg'] = array(
+    'title' => 'Parallax Backgound',
+    'description' => 'Add a Parallax Background effect to any tagged element',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('parallax_bg_admin'),
+    'access arguments' => array('administer site configuration'),
+  );
+  return $items;
+}
+
+/**
+ * Callback function for admin setting.
+ */
+function parallax_bg_admin($form, &$form_state) {
+  // This module will not work if used in overlay paths such as 
+  // admin/* , node/add etc if user has overlay access.
+  // Since the form builder is called after every AJAX request, we rebuild
+  // the form based on $form_state.
+  $settings = variable_get('parallax_bg_settings');
+  $num_elements = isset($settings['triggers_fieldset']) ? count($settings['triggers_fieldset']) + 1 : 1;
+  $form_state['triggers'] = $num_elements;
+
+  $options['helper'] = array(
+    '#markup' => t('Parallax Background activates a script that simulates the parallax effect using a different scroll speed on the background.'),
+  );
+  $options['triggers_fieldset'] = array(
+    '#tree' => TRUE,
+    '#title' => t("Target elements"),
+    // The prefix/suffix provide the div that we're replacing, named by
+    // #ajax['wrapper'] above.
+    '#prefix' => '<div id="triggers-div">',
+    '#suffix' => '</div>',
+    '#type' => 'vertical_tabs',
+    '#description' => t('Elements where Parallax Effect will be added'),
+  );
+  $i = 1;
+  $triggers = isset($settings['triggers_fieldset']) ? $settings['triggers_fieldset'] : array();
+  foreach ($triggers as $trigger) {
+    $options['triggers_fieldset']["trigger$i"] = array(
+      '#type' => 'fieldset',
+      '#title' => isset($trigger["element"]) ? $trigger["element"] : t('New element'),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      '#group' => 'triggers_fieldset'
+    );
+    $options['triggers_fieldset']["trigger$i"]["element"] = array(
+      '#type' => 'textfield',
+      '#default_value' => isset($trigger["element"]) ? $trigger["element"] : '',
+      '#title' => "Valid jQuery selector",
+      '#required' => TRUE,
+    );
+    $options['triggers_fieldset']["trigger$i"]["position"] = array(
+      '#type' => 'select',
+      '#title' => "Position",
+      '#default_value' => isset($trigger["position"]) ? $trigger["position"] : '50%',
+      '#options' => array(
+        '0' => t('Left'),
+        '50%' => t('Middle'),
+        '100%' => t('Right'),
+      ),
+    );
+    $options['triggers_fieldset']["trigger$i"]["speed"] = array(
+      '#type' => 'select',
+      '#title' => "Relative speed",
+      '#default_value' => isset($trigger["speed"]) ? $trigger["speed"] : '0.1',
+      '#options' => array('0.1' => 0.1, '0.2' => 0.2, '0.3' => 0.3, '0.4' => 0.4, '0.5' => 0.5, '0.6' => 0.6, '0.7' => 0.7, '0.8' => 0.8, '0.9' => 0.9, '1' => 1, '1.25' => 1.25, '1.5' => 1.5, '1.75' => 1.75, '2' => 2, '2.5' => 2.5, '3' => 3),
+    );
+    $options['triggers_fieldset']["trigger$i"]['delete'] = array(
+      '#type' => 'button', 
+      '#value' => t('Delete element'),
+      '#name' => 'delete-' . $i,
+      '#submit' => array('parallax_bg_delete_submit'),
+    );
+    $i++;
+  }
+  $options['triggers_fieldset']["trigger$i"] = array(
+    '#type' => 'fieldset',
+    '#title' => t('New element'),
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+    '#group' => 'triggers_fieldset'
+  );
+  $options['triggers_fieldset']["trigger$i"]["element"] = array(
+    '#type' => 'textfield',
+    '#default_value' => NULL,
+    '#title' => "Valid jQuery selector",
+    '#description' => "A valid jQuery selector of the element of the DOM that holds the background. For example <strong>#top-content</strong>, <strong>body.one-page #super-banner</strong>.",
+    '#required' => FALSE,
+  );
+  $options['triggers_fieldset']["trigger$i"]["position"] = array(
+    '#type' => 'select',
+    '#title' => "Position",
+    '#description' => "Horizontal position of the element",
+    '#options' => array(
+      '0' => t('Left'),
+      '50%' => t('Middle'),
+      '100%' => t('Right'),
+    ),
+  );
+  $options['triggers_fieldset']["trigger$i"]["speed"] = array(
+    '#type' => 'select',
+    '#title' => "Relative speed",
+    '#description' => "speed to move relative to vertical scroll. Example: 0.1 is one tenth the speed of scrolling, 2 is twice the speed of scrolling",
+    '#default_value' => '0.1',
+    '#options' => array('0.1' => 0.1, '0.2' => 0.2, '0.3' => 0.3, '0.4' => 0.4, '0.5' => 0.5, '0.6' => 0.6, '0.7' => 0.7, '0.8' => 0.8, '0.9' => 0.9, '1' => 1, '1.25' => 1.25, '1.5' => 1.5, '1.75' => 1.75, '2' => 2, '2.5' => 2.5, '3' => 3),
+  );
+  $options['#tree'] = TRUE;
+  $form['parallax_bg_settings'] = $options;
+  $form['actions']['#type'] = 'actions';
+  $form['actions']['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save configuration'),
+  );
+  $form['#submit'][] = 'parallax_bg_admin_form_submit';
+  // Disable automatic defaults, which don't work with nested values.
+  return $form;
+}
+
+function parallax_bg_delete_submit($form, &$form_state) {
+}
+
+/**
+ * Now we add a handler/function to validate the data entered into the
+ * "year of birth" field to make sure it's between the values of 1900
+ * and 2000. If not, it displays an error. The value report is
+ * $form_state['values'] (see http://drupal.org/node/144132#form-state).
+ *
+ * Notice the name of the function. It is simply the name of the form
+ * followed by '_validate'. This is always the name of the default validation
+ * function. An alternate list of validation functions could have been provided
+ * in $form['#validate'].
+ *
+ * @see parallax_bg_admin()
+ */
+function parallax_bg_admin_validate($form, &$form_state) {
+  if ($form_state['clicked_button']['#value'] == "Delete element") {
+    $settings = variable_get('parallax_bg_settings');
+    $child = $form_state['clicked_button']['#parents'][2];
+    unset($settings['triggers_fieldset'][$child]);
+    variable_set('parallax_bg_settings', $settings);
+    $form_state['rebuild'] = TRUE;
+    $form_state['flag'] = 1;
+    drupal_set_message(t('The element have been deleted.'));
+    drupal_goto('admin/config/user-interface/parallax_bg');
+  }
+}
+
+function parallax_bg_admin_form_submit($form, &$form_state) {
+  // Exclude unnecessary elements.
+  form_state_values_clean($form_state);
+  $i = $form_state['triggers'];
+  if (!strlen($form_state['values']['parallax_bg_settings']['triggers_fieldset']["trigger$i"]["element"])) {
+    unset($form_state['values']['parallax_bg_settings']['triggers_fieldset']["trigger$i"]);
+  }
+  unset($form_state['values']['parallax_bg_settings']['triggers_fieldset']["parallax_bg_settings__triggers_fieldset__active_tab"]);
+
+  foreach ($form_state['values'] as $key => $value) {
+    if (is_array($value) && isset($form_state['values']['array_filter'])) {
+      $value = array_keys(array_filter($value));
+    }
+    variable_set($key, $value);
+  }
+
+  drupal_set_message(t('The configuration options have been saved.'));
+}

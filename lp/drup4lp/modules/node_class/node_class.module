@@ -1,0 +1,114 @@
+<?php
+
+/**
+ * @file
+ * node_class module.
+ */
+
+/**
+ * Extends the node's classes with any user defined classes.
+ */
+function node_class_preprocess_node(&$vars) {
+  $node = $vars['node'];
+  $classes = node_class($node);
+  $vars['classes_array'] = array_merge($vars['classes_array'], 
+    explode(' ', $classes));
+}
+
+/**
+ * Accessor for css_class information
+ */
+function node_class($node) {
+  $attributes = node_class_attributes($node);
+  return $attributes;
+}
+
+/**
+ * Gets CSS class information for a given node.
+ */
+function node_class_attributes($node) {
+	if (isset($node->nid)) {
+  	$ret = db_query('SELECT css_class FROM {node_class} WHERE nid = :nid', 
+    	array(':nid' => $node->nid))->fetchField();
+	}
+  return isset($ret) ? $ret : '';
+}
+
+/**
+ * Implementation of hook_form_alter().
+ */
+function node_class_form_alter(&$form, &$form_state, $form_id) {
+  // Check form type && if user_access is ok
+  if (isset($form['#node']) && ($form_id == $form['#node']->type . '_node_form') &&
+     user_access('administer nodes')) {
+    // Add form elements in vertical tab to node settings.
+    $form['node_class'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Node Class settings'),
+      '#description' => t('Assign CSS classes to the node.'),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      '#access' => user_access('administer nodes'),
+      '#weight' => 80,
+      '#tree' => TRUE,
+      '#group' => 'additional_settings',
+      '#tree' => TRUE,
+      '#attributes' => array('class' => array('node-class-form')));
+    
+    // Get css attribute information
+    $attributes = node_class_attributes($form['#node']);
+    
+    // Check CSS exists in DB to prepare SQL update
+    if ($attributes) {
+      $form['node_class']['existing_css'] = array(
+        '#type' => 'hidden',
+        '#value' => '1');
+    }
+    
+    $form['node_class']['css_class'] = array(
+      '#type' => 'textfield',
+      '#title' => t('CSS class(es)'),
+      '#default_value' => $attributes,
+      '#description' => t('Separate classes with a space.'));
+  }
+}
+
+/**
+ * Implementation of hook_node_insert().
+ */
+function node_class_node_insert($node) {
+	if (isset($node->node_class['css_class'])) {
+		$nid = $node->nid;
+		$class = check_plain($node->node_class['css_class']);
+		node_class_upsert($nid, $class);
+	} 
+}
+
+/**
+ * Implementation of hook_node_update().
+ */
+function node_class_node_update($node) {
+	if (isset($node->node_class['css_class'])) {
+		$nid = $node->nid;
+		$class = check_plain($node->node_class['css_class']);
+		node_class_upsert($nid, $class);
+	} 
+}
+
+
+function node_class_upsert($nid, $class) {
+	if (!db_query("SELECT COUNT(*) FROM {node_class} WHERE nid = :nid", array(':nid' => $nid))->fetchField()) {
+		$id = db_insert('node_class')->fields(array('nid' => $nid,'css_class' => $class))->execute();
+	}
+	else {
+		db_update('node_class')->fields(array('css_class' => $class))->condition('nid', $nid)->execute();
+	}
+}
+
+/**
+ * Implementation of hook_node_delete().
+ */
+function node_class_node_delete($node) {
+  // Delete class information for the node
+  db_delete('node_class')->condition('nid', $node->nid)->execute();
+}

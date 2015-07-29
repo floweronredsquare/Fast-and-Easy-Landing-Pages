@@ -1,0 +1,53 @@
+<?php
+
+/**
+ * @file
+ * Set up for the requirements page for WOW javascript library.
+ */
+
+/**
+ * Implements hook_requirements().
+ */
+function wowjs_requirements($phase) {
+  $requirements = array();
+  $t = get_t();
+
+  // Report the version of WOW javascript library.
+  if ($phase == 'runtime') {
+    $requirements['wow']['title'] = $t('WOW Javascript library');
+
+    $library = libraries_get_libraries();
+    $installed = (isset($library['wow'])) ? TRUE : FALSE;
+    if ($installed) {
+      $requirements['wow']['severity'] = REQUIREMENT_OK;
+      $requirements['wow']['value'] = $t('Installed');
+      $wow = libraries_detect('wow');
+      $requirements['wow']['value'] .= ' (' . $wow['version'] . ')';
+    }
+    else {
+      drupal_set_message($t('You should install the WOW Javascript library. 
+        Please read the installation instructions in the README.txt file of the
+         wowjs module.'), 'warning'
+      );
+      $requirements['wow']['value'] = $t('Not installed');
+      $requirements['wow']['severity'] = REQUIREMENT_ERROR;
+      $requirements['wow']['description'] = $t("Please download the WOW Javascript library from <a href='@link' target='_blank' title='Click here to download the WOW JS library'>@link</a>. See WOWJS module's documentation or its README.txt file to get information about how to install that library.", array('@link' => 'https://github.com/matthieua/WOW/archive/master.zip'));
+    }
+  }
+
+  return $requirements;
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function wowjs_uninstall() {
+  $result = db_query("SELECT name FROM {variable} WHERE name LIKE :wowjs_name",
+    array(
+      ":wowjs_name" => "wowjs_%",
+    )
+  );
+  foreach ($result as $variable) {
+    variable_del($variable->name);
+  }
+}

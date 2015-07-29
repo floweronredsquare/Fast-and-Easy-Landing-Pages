@@ -1,0 +1,357 @@
+<?php
+
+/**
+ * @file
+ * A module that include content box with different icons.
+ *
+ * Maintainer: http://www.developmenticon.com/
+ * Written by Himanshu Shakhar (developmenticon)
+ */
+
+/**
+ * Implements hook_help().
+ *
+ * Displays help and module information.
+ */
+function iconbox_help($path, $arg) {
+  switch ($path) {
+    case "admin/help#iconbox":
+      return '<p>' . t("Icon Box to show content box with icons.") . '</p>';
+      break;
+  }
+}
+
+/**
+ * Implements hook_permission().
+ */
+function iconbox_permission() {
+  $perms = array(
+    'administer iconbox' => array(
+      'title' => t('Administer Icon Box'),
+      'restrict access' => TRUE,
+    ),
+  );
+  return $perms;
+}
+
+/**
+ * Implements hook_libraries_info().
+ */
+function iconbox_libraries_info() {
+  $libraries['fontawesome'] = array(
+    'name' => 'Font Awesome',
+    'vendor url' => 'http://fortawesome.github.com/Font-Awesome/',
+    'download url' => 'https://github.com/FortAwesome/Font-Awesome/zipball/master',
+    'version arguments' => array(
+      'file' => 'css/font-awesome.css',
+      'pattern' => '@(?i:Font Awesome) ([0-9\.a-z]+)@',
+      'lines' => 2,
+    ),
+    'files' => array(
+      'css' => array(
+        'css/font-awesome.css',
+      ),
+    ),
+  );
+
+  return $libraries;
+}
+
+/**
+ * Implements hook_menu().
+ */
+function iconbox_menu() {
+  //List iconbox.
+  $items['admin/config/user-interface/iconbox'] = array(
+    'title' => t('Iconbox'),
+    'description' => 'Create and configure Iconbox.',
+    'page callback' => 'iconbox_overview_page',
+    'access callback' => 'user_access',
+    'access arguments' => array('administer iconbox'),
+    'file' => 'iconbox.admin.inc',
+  );
+  $items['admin/config/user-interface/iconbox/list'] = array(
+    'title' => 'List Iconbox',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -10,
+  );
+  //Add iconbox.
+  $items['admin/config/user-interface/iconbox/add'] = array(
+    'title' => 'Add iconbox',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('iconbox_edit_box','add'),
+    'access arguments' => array('administer iconbox'),
+    'description' => 'Add the iconbox.',
+    'type' => MENU_LOCAL_ACTION,
+    'file' => 'iconbox.admin.inc',
+  );
+  //Edit iconbox.
+  $items['admin/config/user-interface/iconbox/manage/%iconbox/edit'] = array(
+    'title' => 'Edit iconbox',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('iconbox_edit_box', 'edit', 5),
+    'access arguments' => array('administer iconbox'),
+    'file' => 'iconbox.admin.inc',
+  );
+  //Delete iconbox.
+  $items['admin/config/user-interface/iconbox/manage/%iconbox/delete'] = array(
+    'title' => 'Delete iconbox',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('iconbox_delete_box', 5),
+    'access arguments' => array('administer iconbox'),
+    'file' => 'iconbox.admin.inc',
+  );
+
+  //List box.
+  $items['admin/config/user-interface/iconbox/manage/%iconbox'] = array(
+    'title' => 'List Box',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('iconbox_box_overview_form', 5),
+    'access arguments' => array('administer iconbox'),
+    'title callback' => 'iconbox_overview_title',
+    'title arguments' => array(5),
+    'file' => 'box.admin.inc',
+  );
+  //Add box.
+  $items['admin/config/user-interface/iconbox/manage/%iconbox/add'] = array(
+    'title' => 'Add Box',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('iconbox_box_edit_box', 'add', 5, NULL),
+    'access arguments' => array('administer iconbox'),
+    'type' => MENU_LOCAL_ACTION,
+    'file' => 'box.admin.inc',
+  );
+  //Edit box.
+  $items['admin/config/user-interface/iconbox/box/%iconbox_box/edit'] = array(
+    'title' => 'Edit box',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('iconbox_box_edit_box', 'edit', NULL, 5),
+    'access arguments' => array('administer iconbox'),
+    'file' => 'box.admin.inc',
+  );
+  //Delete box.
+  $items['admin/config/user-interface/iconbox/box/%iconbox_box/delete'] = array(
+    'title' => 'Delete box',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('iconbox_box_delete_box', 'delete', 5),
+    'access arguments' => array('administer iconbox'),
+    'file' => 'box.admin.inc',
+  );
+  return $items;
+}
+
+/**
+ * Load the data for a single iconbox.
+ *
+ * @param $iconbox_name
+ *   The unique name of a iconbox to load.
+ * @return
+ *   Array defining the iconbox, or FALSE if the iconbox doesn't exist.
+ */
+function iconbox_load($iconbox_name) {
+  $all_iconboxs = iconbox_load_all();
+  return isset($all_iconboxs[$iconbox_name]) ? $all_iconboxs[$iconbox_name] : FALSE;
+}
+
+/**
+ * Load all iconbox data.
+ *
+ * @return
+ *   Array of iconbox data.
+ */
+function iconbox_load_all() {
+  $iconboxs = &drupal_static(__FUNCTION__);
+  if (!isset($iconboxs)) {
+    if ($cached = cache_get('iconbox', 'cache_iconbox')) {
+      $iconboxs = $cached->data;
+    }
+    else {
+      $iconboxs = db_query('SELECT * FROM {iconbox}')->fetchAllAssoc('iconbox_name', PDO::FETCH_ASSOC);
+      cache_set('iconbox', $iconboxs, 'cache_iconbox');
+    }
+  }
+  return $iconboxs;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function iconbox_theme() {
+  return array(
+    'iconbox_admin_overview' => array(
+      'file' => 'iconbox.admin.inc',
+      'variables' => array('title' => NULL, 'name' => NULL),
+    ),
+    'iconbox_box_overview_form' => array(
+      'file' => 'box.admin.inc',
+      'render element' => 'form',
+    ),
+    'iconbox_fontawesome_icon_build' => array(
+      'file' => 'box.admin.inc',
+      'variables' => array('class' => NULL, 'size' => NULL, 'style' => NULL, 'looks' => NULL),
+    ),
+    'iconbox_content' => array(
+      'variables' => array('iconbox_data' => NULL, 'settings' => NULL, 'preview' => FALSE),
+      'template' => 'theme/iconbox-content',
+      'file' => 'theme/iconbox.theme.inc',
+    ),
+  );
+}
+
+/**
+ * Title callback for the iconbox overview page.
+ */
+function iconbox_overview_title($iconbox) {
+  return $iconbox['title'];
+}
+
+/**
+ * Save a iconbox.
+ *
+ * @param $iconbox
+ *   An array representing a iconbox:
+ *   - iconbox_name: The unique name of the iconbox (composed of lowercase
+ *     letters, numbers, and hyphens).
+ *   - title: The human readable iconbox title.
+ *   - optionset: The iconbox option set array.
+ */
+function iconbox_save($iconbox) {
+  $status = db_merge('iconbox')
+    ->key(array('iconbox_name' => $iconbox['iconbox_name']))
+    ->fields(array(
+      'title' => $iconbox['title'],
+      'optionset' => serialize($iconbox['optionset']),
+    ))
+    ->execute();
+}
+
+/**
+ * Delete a iconbox and all contained box.
+ * hook_menu_delete().
+ */
+function iconbox_delete($iconbox) {
+  // Delete all boxes from the iconbox.
+  db_delete('iconbox_box')
+    ->condition('iconbox_name', $iconbox['iconbox_name'])
+    ->execute();
+
+  // Delete the iconbox.
+  db_delete('iconbox')
+    ->condition('iconbox_name', $iconbox['iconbox_name'])
+    ->execute();
+}
+
+/**
+ * Load box data.
+ * @param iconbox
+ *   The boxid of the iconbox box.
+ */
+function iconbox_box_load($boxid) {
+  if (is_numeric($boxid)) {
+    $query = db_select('iconbox_box', 'ml');
+    $query->fields('ml');
+    $query->condition('ml.boxid', $boxid);
+    if ($box = $query->execute()->fetchAssoc()) {
+      return $box;
+    }
+  }
+  return FALSE;
+}
+
+/**
+ * Save a iconbox box.
+ *
+ * @param $box
+ *   An array representing a iconbox box:
+ *   - boxid: The unique id of the box
+ *   - iconbox_name: The parent iconbox name.
+ *   - box_title: The human readable box title.
+ *   - weight: The box order value.
+ *   - fontawesome_icon: The font awesome icon.
+ *   - box_content: The box content.
+ */
+function iconbox_box_save($box) {
+  $status = db_merge('iconbox_box')
+    ->key(array('boxid' => $box['boxid']))
+    ->fields(array(
+      'iconbox_name' => $box['iconbox_name'],
+      'box_title' => $box['box_title'],
+      'weight' => $box['weight'],
+      'fontawesome_icon' => $box['fontawesome_icon'],
+      'box_content' => $box['box_content'],
+    ))
+    ->execute();
+}
+
+/**
+ * Delete a iconbox box.
+ * hook_menu_delete().
+ */
+function iconbox_box_delete($box) {
+
+  // Delete the box.
+  db_delete('iconbox_box')
+    ->condition('boxid', $box)
+    ->execute();
+}
+
+/**
+ * Implements hook_block_info().
+ */
+function iconbox_block_info() {
+  $iconboxes = iconbox_get_iconboxes();
+
+  $blocks = array();
+  foreach ($iconboxes as $name => $title) {
+    $blocks[$name]['info'] = t('Iconbox: ' .check_plain($title));
+    $blocks[$name]['cache'] = DRUPAL_CACHE_GLOBAL;
+  }
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function iconbox_block_view($delta = '') {
+  $iconboxes = iconbox_get_iconboxes();
+
+  $data['subject'] = NULL;
+  $data['content'] = iconbox_load_iconboxes($delta);
+  return $data;
+}
+
+/**
+ * Return an associative array of the iconbox names.
+ *   An array with the machine-readable names as the keys, and human-readable
+ *   titles as the values.
+ */
+function iconbox_get_iconboxes() {
+  $iconboxes = iconbox_load_all();
+  foreach ($iconboxes as $iconbox_name => $iconbox) {
+    $iconboxes[$iconbox_name] = t($iconbox['title']);
+  }
+  return $iconboxes;
+}
+
+/**
+ * Load iconbox and all contained boxes.
+ *
+ * @return
+ *   Array of iconbox with contained boxes data.
+ */
+function iconbox_load_iconboxes($delta) {
+
+  $result = db_query("SELECT * FROM {iconbox_box} WHERE iconbox_name = :iconbox ORDER BY weight", 
+  array(':iconbox' => $delta), array('fetch' => PDO::FETCH_ASSOC));
+
+  $iconbox = iconbox_load($delta);
+
+  if($result->rowCount() > 0) {
+    drupal_add_css(libraries_get_path('fontawesome') . '/css/font-awesome.css'); // add library fontawesome.css
+    drupal_add_css(drupal_get_path('module', 'iconbox') . '/css/iconbox.css'); // add css
+    drupal_add_js(drupal_get_path('module', 'iconbox') . '/js/iconbox.js'); // add js
+
+    return theme('iconbox_content', array('iconbox_data' => $result, 'settings' => unserialize($iconbox['optionset']), 'preview' => FALSE));
+  }
+  return FALSE;
+}

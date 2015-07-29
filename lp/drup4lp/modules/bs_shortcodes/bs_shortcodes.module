@@ -1,0 +1,2091 @@
+<?php
+/**
+ * @file
+ * Adds shortcodes for all Bootstrap elements.
+ * @author Filip Stefansson, Simon Yeldon, and Michael W. Delaney, Jurriaan Roelofs
+ */
+
+require_once( dirname( __FILE__ ) . '/includes/functions.php' );
+
+
+
+/**
+ * Implementation of hook_preprocess_page().
+ */
+function bs_shortcodes_preprocess_page(&$variables) {
+  $path = drupal_get_path('module', 'bs_shortcodes');
+  drupal_add_js($path . '/includes/js/bootstrap-shortcodes-tooltip.js', 'file');
+  drupal_add_js($path . '/includes/js/bootstrap-shortcodes-popover.js', 'file');
+  // drupal_add_js($path . 'js/bootstrap-shortcodes-scrollspy.js', 'file');
+}
+
+
+/**
+ *
+ * add_shortcodes
+ *
+ * @author Filip Stefansson
+ * @since 1.0
+ *
+ */
+function bs_shortcodes_shortcode_info() {
+
+  $shortcodes_list = array(
+    'alert',
+    'badge',
+    'breadcrumb',
+    'breadcrumb-item',
+    'button',
+    'button-group',
+    'button-toolbar',
+    'caret',
+    'carousel',
+    'carousel-item',
+    'code',
+    'collapse',
+    'collapsibles',
+    'column',
+    'container',
+    'divider',
+    'dropdown',
+    'dropdown-header',
+    'dropdown-item',
+    'emphasis',
+    'icon',
+    'img',
+    'jumbotron',
+    'label',
+    'lead',
+    'list-group',
+    'list-group-item',
+    'list-group-item-heading',
+    'list-group-item-text',
+    'media',
+    'media-body',
+    'media-object',
+    'modal',
+    'modal-footer',
+    'nav',
+    'nav-item',
+    'page-header',
+    'panel',
+    'popover',
+    'progress',
+    'progress-bar',
+    'responsive',
+    'row',
+    'span',
+    'tab',
+    'table',
+    'table-wrap',
+    'tabs',
+    'thumbnail',
+    'tooltip',
+    'well',
+  );
+
+  foreach ( $shortcodes_list as $shortcode ) {
+
+    $shortcode_php = 'bs_shortcodes_' . str_replace( '-', '_', $shortcode );
+    $shortcodes[$shortcode] = array(
+      'title' => $shortcode,
+      'description' => t("Bootstrap 3 @shortcode", array('@shortcode' => $shortcode)),
+      'process callback' => $shortcode_php,
+      'tips callback' => '',
+      'default settings' => array(),
+      'attributes callback' => $shortcode_php . '_attributes',
+    );
+  }
+
+  $shortcodes['shortcode-help'] = array(
+    'title' => '',
+    'description' => t('Links documentation in text formats help'),
+    'process callback' => '',
+    'tips callback' => 'bs_shortcodes_shortcode_help_tips',
+    'default settings' => array(),
+    'attributes callback' => '',
+  );
+
+  return $shortcodes;
+}
+
+/**
+ *
+ * bs_shortcodes_button
+ *
+ * @author Filip Stefansson, Nicolas Jonas
+ * @since 1.0
+ * //DW mod added xclass var
+ */
+function bs_shortcodes_button( $attrs, $content = '' ) {
+
+  extract( shortcode_attrs( array(
+    "type"     => '',
+    "style"     => '',
+    "size"     => '',
+    "block"    => '',
+    "dropdown" => '',
+    "link"     => '',
+    "target"   => '',
+    "disabled" => '',
+    "active"   => '',
+    "xclass"   => '',
+    "title"    => '',
+    "data"     => ''
+  ), $attrs ) );
+
+  $class  = 'btn';
+  $class .= ( $type )     ? ' btn-' . $type : ' btn-default';
+  $class .= ( $size )     ? ' btn-' . $size : '';
+  $class .= ( $block      != '' )    ? ' btn-block' : '';
+  $class .= ( $dropdown   != '' ) ? ' dropdown-toggle' : '';
+  $class .= ( $disabled   != '' ) ? ' disabled' : '';
+  $class .= ( $active     != '' )   ? ' active' : '';
+  $class .= ( $xclass )   ? ' ' . $xclass : '';
+
+  // Styles:
+  // Transparent
+  // 3d
+  // 3d-plus
+  // swag see also http://tympanus.net/Development/CreativeButtons/
+
+  $data_props = _bs_shortcodes_parse_data_attributes( $data );
+
+  return sprintf(
+    '<a href="%s" class="%s"%s%s%s>%s</a>',
+    check_url( $link ),
+    check_plain( $class ),
+    ( $target )     ? sprintf( ' target="%s"', check_plain( $target ) ) : '',
+    ( $title )      ? sprintf( ' title="%s"',  check_plain( $title ) )  : '',
+    ( $data_props ) ? ' ' . $data_props : '',
+    $content
+  );
+
+}
+
+/**
+ *
+ * bs_shortcodes_button_group
+ *
+ * @author M. W. Delaney
+ *
+ */
+function bs_shortcodes_button_group( $attrs, $content = '' ) {
+
+   extract( shortcode_attrs( array(
+      "size"      => '',
+      "vertical"  => '',
+      "justified" => '',
+      "dropup"    => '',
+      "xclass"    => '',
+      "data"      => ''
+   ), $attrs ) );
+
+  $class  = 'btn-group';
+  $class .= ( $size )         ? ' btn-group-' . $size : '';
+  $class .= ( $vertical   != '' )     ? ' btn-group-vertical' : '';
+  $class .= ( $justified  != '' )    ? ' btn-group-justified' : '';
+  $class .= ( $dropup     != '' )       ? ' dropup' : '';
+  $class .= ( $xclass )       ? ' ' . $xclass : '';
+  $data_props = _bs_shortcodes_parse_data_attributes( $data );
+
+  return sprintf(
+    '<div class="%s"%s>%s</div>',
+    check_plain( $class ),
+    ( $data_props ) ? ' ' . $data_props : '',
+    $content
+  );
+}
+
+/**
+ *
+ * bs_shortcodes_button_toolbar
+ *
+ */
+function bs_shortcodes_button_toolbar( $attrs, $content = '' ) {
+
+  extract( shortcode_attrs( array(
+    "xclass" => '',
+    "data"   => ''
+  ), $attrs ) );
+
+  $class  = 'btn-toolbar';
+  $class .= ( $xclass )   ? ' ' . $xclass : '';
+
+  $data_props = _bs_shortcodes_parse_data_attributes( $data );
+
+  return sprintf(
+    '<div class="%s"%s>%s</div>',
+    check_plain( $class ),
+    ( $data_props ) ? ' ' . $data_props : '',
+    $content
+  );
+}
+
+/**
+ *
+ * bs_shortcodes_caret
+ *
+ * @author Filip Stefansson
+ * @since 1.0
+ *
+ */
+function bs_shortcodes_caret( $attrs, $content = '' ) {
+
+  extract( shortcode_attrs( array(
+    "xclass" => '',
+    "data"   => ''
+  ), $attrs ) );
+
+  $class  = 'caret';
+  $class .= ( $xclass )   ? ' ' . $xclass : '';
+
+  $data_props = _bs_shortcodes_parse_data_attributes( $data );
+
+  return sprintf(
+    '<span class="%s"%s>%s</span>',
+    check_plain( $class ),
+    ( $data_props ) ? ' ' . $data_props : '',
+    $content
+  );
+}
+
+/**
+ *
+ * bs_shortcodes_container
+ *
+ * @author Robin Wouters
+ * @since 3.0.3.3
+ *
+ */
+function bs_shortcodes_container( $attrs, $content = '' ) {
+
+  extract( shortcode_attrs( array(
+    "fluid"  => '',
+    "xclass" => '',
+    "data"   => ''
+  ), $attrs ) );
+
+  $class  = ( $fluid   != '' )  ? 'container-fluid' : 'container';
+  $class .= ( $xclass ) ? ' ' . $xclass : '';
+
+  $data_props = _bs_shortcodes_parse_data_attributes( $data );
+
+  return sprintf(
+    '<div class="%s"%s>%s</div>',
+    check_plain( $class ),
+    ( $data_props ) ? ' ' . $data_props : '',
+    $content
+  );
+}
+
+/**
+ *
+ * bs_shortcodes_dropdown
+ *
+ * @author M. W. Delaney
+ *
+ */
+function bs_shortcodes_dropdown( $attrs, $content = '' ) {
+
+   extract( shortcode_attrs( array(
+    "xclass" => '',
+    "data"   => ''
+   ), $attrs ) );
+
+  $class  = 'dropdown-menu';
+  $class .= ( $xclass ) ? ' ' . $xclass : '';
+
+  $data_props = _bs_shortcodes_parse_data_attributes( $data );
+
+  return sprintf(
+    '<ul role="menu" class="%s"%s>%s</ul>',
+    check_plain( $class ),
+    ( $data_props ) ? ' ' . $data_props : '',
+    $content
+  );
+}
+
+/**
+ *
+ * bs_shortcodes_dropdown_item
+ *
+ * @author M. W. Delaney
+ *
+ */
+function bs_shortcodes_dropdown_item( $attrs, $content = '' ) {
+
+  extract( shortcode_attrs( array(
+    "link"        => '',
+    "disabled"    => '',
+    "xclass"      => '',
+    "data"        => ''
+  ), $attrs ) );
+
+  $li_class  = '';
+  $li_class .= ( $disabled   != '' ) ? ' disabled' : '';
+
+  $a_class  = '';
+  $a_class .= ( $xclass ) ? ' ' . $xclass : '';
+
+  $data_props = _bs_shortcodes_parse_data_attributes( $data );
+
+  return sprintf(
+    '<li role="presentation" class="%s"><a role="menuitem" href="%s" class="%s"%s>%s</a></li>',
+    check_plain( $li_class ),
+    check_url( $link ),
+    check_plain( $a_class ),
+    ( $data_props ) ? ' ' . $data_props : '',
+    $content
+  );
+}
+
+/**
+ *
+ * bs_shortcodes_dropdown_divider
+ *
+ * @author M. W. Delaney
+ *
+ */
+function bs_shortcodes_divider( $attrs, $content = '' ) {
+
+  extract( shortcode_attrs( array(
+      "xclass" => '',
+      "data" => ''
+   ), $attrs ) );
+
+  $class  = 'divider';
+  $class .= ( $xclass )   ? ' ' . $xclass : '';
+
+  $data_props = _bs_shortcodes_parse_data_attributes( $data );
+
+  return sprintf(
+    '<li class="%s"%s>%s</li>',
+    check_plain( $class ),
+    ( $data_props ) ? ' ' . $data_props : '',
+    $content
+  );
+}
+
+/**
+ *
+ * bs_shortcodes_dropdown_header
+ *
+ * @author M. W. Delaney
+ *
+ */
+function bs_shortcodes_dropdown_header( $attrs, $content = '' ) {
+
+  extract( shortcode_attrs( array(
+      "xclass" => '',
+      "data"   => ''
+   ), $attrs ) );
+
+  $class  = 'dropdown-header';
+  $class .= ( $xclass ) ? ' ' . $xclass : '';
+
+  $data_props = _bs_shortcodes_parse_data_attributes( $data );
+
+  return sprintf(
+    '<li class="%s"%s>%s</li>',
+    check_plain( $class ),
+    ( $data_props ) ? ' ' . $data_props : '',
+    $content
+  );
+}
+
+/**
+ *
+ * bs_shortcodes_nav
+ *
+ */
+function bs_shortcodes_nav( $attrs, $content = '' ) {
+
+   extract( shortcode_attrs( array(
+      "type"      => '',
+      "stacked"   => '',
+      "justified" => '',
+      "xclass"    => '',
+      "data"      => ''
+   ), $attrs ) );
+
+  $class  = 'nav';
+  $class .= ( $type )         ? ' nav-' . $type : ' nav-tabs';
+  $class .= ( $stacked   != '' )      ? ' nav-stacked' : '';
+  $class .= ( $justified != '' )    ? ' nav-justified' : '';
+  $class .= ( $xclass )       ? ' ' . $xclass : '';
+
+  $data_props = _bs_shortcodes_parse_data_attributes( $data );
+
+  return sprintf(
+    '<ul class="%s"%s>%s</ul>',
+    check_plain( $class ),
+    ( $data_props ) ? ' ' . $data_props : '',
+    $content
+  );
+}
+
+/**
+ *
+ * bs_shortcodes_nav_item
+ *
+ */
+function bs_shortcodes_nav_item( $attrs, $content = '' ) {
+
+  extract( shortcode_attrs( array(
+    "link"     => '',
+    "active"   => '',
+    "disabled" => '',
+    "dropdown" => '',
+    "xclass"   => '',
+    "data"     => '',
+  ), $attrs ) );
+
+  $li_classes  = '';
+  $li_classes .= ( $dropdown ) ? 'dropdown' : '';
+  $li_classes .= ( $active   != '' )   ? ' active' : '';
+  $li_classes .= ( $disabled != '' ) ? ' disabled' : '';
+
+  $a_classes  = '';
+  $a_classes .= ( $dropdown   != '' ) ? ' dropdown-toggle' : '';
+  $a_classes .= ( $xclass )   ? ' ' . $xclass : '';
+
+  $data_props = _bs_shortcodes_parse_data_attributes( $data );
+
+  # Wrong idea I guess ....
+  #$pattern = ( $dropdown ) ? '<li%1$s><a href="%2$s"%3$s%4$s%5$s></a>%6$s</li>' : '<li%1$s><a href="%2$s"%3$s%4$s%5$s>%6$s</a></li>';
+
+  //* If we have a dropdown shortcode inside the content we end the link before the dropdown shortcode, else all content goes inside the link
+  $content = ( $dropdown ) ? str_replace( '[dropdown]', '</a>[dropdown]', $content ) : $content . '</a>';
+
+  return sprintf(
+    '<li%1$s><a href="%2$s"%3$s%4$s%5$s>%6$s</li>',
+    ( ! empty( $li_classes ) ) ? sprintf( ' class="%s"', check_plain( $li_classes ) ) : '',
+    check_url( $link ),
+    ( ! empty( $a_classes ) )  ? sprintf( ' class="%s"', check_plain( $a_classes ) )  : '',
+    ( $dropdown )   ? ' data-toggle="dropdown"' : '',
+    ( $data_props ) ? ' ' . $data_props : '',
+    $content
+  );
+
+}
+
+/**
+ *
+ * bs_shortcodes_alert
+ *
+ * @author Filip Stefansson
+ * @since 1.0
+ *
+ */
+function bs_shortcodes_alert( $attrs, $content = '' ) {
+
+  extract( shortcode_attrs( array(
+    "type"          => '',
+    "dismissable"   => '',
+    "xclass"        => '',
+    "data"          => ''
+  ), $attrs ) );
+
+  $class  = 'alert';
+  $class .= ( $type )         ? ' alert-' . $type : ' alert-success';
+  $class .= ( $dismissable   != '' )  ? ' alert-dismissable' : '';
+  $class .= ( $xclass )       ? ' ' . $xclass : '';
+
+  $dismissable = ( $dismissable ) ? '<button type="button" class="close" data-dismiss="alert" aria-hidden="TRUE">&times;</button>' : '';
+
+  $data_props = _bs_shortcodes_parse_data_attributes( $data );
+
+  return sprintf(
+    '<div class="%s"%s>%s%s</div>',
+    check_plain( $class ),
+    ( $data_props )  ? ' ' . $data_props : '',
+    $dismissable,
+    $content
+  );
+}
+
+/**
+ *
+ * bs_shortcodes_progress
+ *
+ */
+function bs_shortcodes_progress( $attrs, $content = '' ) {
+
+  extract( shortcode_attrs( array(
+    "striped"   => '',
+    "animated"  => '',
+    "xclass"    => '',
+    "data"      => ''
+  ), $attrs ) );
+
+  $class  = 'progress';
+  $class .= ( $striped   != '' )  ? ' progress-striped' : '';
+  $class .= ( $animated  != '' ) ? ' active' : '';
+  $class .= ( $xclass )   ? ' ' . $xclass : '';
+
+  $data_props = _bs_shortcodes_parse_data_attributes( $data );
+
+  return sprintf(
+    '<div class="%s"%s>%s</div>',
+    check_plain( $class ),
+    ( $data_props )  ? ' ' . $data_props : '',
+    $content
+  );
+}
+
+/**
+ *
+ * bs_shortcodes_progress_bar
+ *
+ */
+function bs_shortcodes_progress_bar( $attrs, $content = '' ) {
+
+   extract( shortcode_attrs( array(
+      "type"      => '',
+      "percent"   => '',
+      "label"     => '',
+      "xclass"    => '',
+      "data"      => ''
+   ), $attrs ) );
+
+  $class  = 'progress-bar';
+  $class .= ( $type )   ? ' progress-bar-' . $type : '';
+  $class .= ( $xclass ) ? ' ' . $xclass : '';
+
+  $data_props = _bs_shortcodes_parse_data_attributes( $data );
+
+  return sprintf(
+    '<div class="%s" role="progressbar" %s%s>%s</div>',
+    check_plain( $class ),
+    ( $percent )      ? ' aria-value="' . (int) $percent . '" aria-valuemin="0" aria-valuemax="100" style="width: ' . (int) $percent . '%;"' : '',
+    ( $data_props )   ? ' ' . $data_props : '',
+    ( $percent )      ? sprintf('<span%s>%s</span>', ( !$label ) ? ' class="sr-only"' : '', (int) $percent . '% Complete') : ''
+  );
+}
+
+/**
+ *
+ * bs_shortcodes_code
+ *
+ * @author Filip Stefansson
+ * @since 1.0
+ *
+ */
+function bs_shortcodes_code( $attrs, $content = '' ) {
+
+   extract( shortcode_attrs( array(
+      "inline"      => '',
+      "scrollable"  => '',
+      "xclass"      => '',
+      "data"        => ''
+   ), $attrs ) );
+
+  $class  = '';
+  $class .= ( $scrollable   != '' )  ? ' pre-scrollable' : '';
+  $class .= ( $xclass )   ? ' ' . $xclass : '';
+
+  $data_props = _bs_shortcodes_parse_data_attributes( $data );
+
+  return sprintf(
+    '<%1$s class="%2$s"%3$s>%4$s</%1$s>',
+    ( $inline ) ? 'code' : 'pre',
+    check_plain( $class ),
+    ( $data_props ) ? ' ' . $data_props : '',
+    $content
+  );
+}
+
+/**
+ *
+ * bs_shortcodes_row
+ *
+ * @author Filip Stefansson
+ * @since 1.0
+ *
+ */
+function bs_shortcodes_row( $attrs, $content = '' ) {
+
+  extract( shortcode_attrs( array(
+    "xclass" => '',
+    "data"   => ''
+  ), $attrs ) );
+
+  $class  = 'row';
+  $class .= ( $xclass )   ? ' ' . $xclass : '';
+
+  $data_props = _bs_shortcodes_parse_data_attributes( $data );
+
+  return sprintf(
+    '<div class="%s"%s>%s</div>',
+    check_plain( $class ),
+    ( $data_props ) ? ' ' . $data_props : '',
+    $content
+  );
+}
+
+/**
+ *
+ * bs_shortcodes_column
+ *
+ * @author Simon Yeldon
+ * @since 1.0
+ * @todo pull and offset
+ */
+function bs_shortcodes_column( $attrs, $content = '' ) {
+
+  extract( shortcode_attrs( array(
+    "lg"          => '',
+    "md"          => '',
+    "sm"          => '',
+    "xs"          => '',
+    "offset_lg"   => '',
+    "offset_md"   => '',
+    "offset_sm"   => '',
+    "offset_xs"   => '',
+    "pull_lg"     => '',
+    "pull_md"     => '',
+    "pull_sm"     => '',
+    "pull_xs"     => '',
+    "push_lg"     => '',
+    "push_md"     => '',
+    "push_sm"     => '',
+    "push_xs"     => '',
+    "xclass"      => '',
+    "data"        => ''
+  ), $attrs ) );
+
+  $class  = '';
+  $class .= ( $lg )             ? ' col-lg-' . $lg : '';
+  $class .= ( $md )             ? ' col-md-' . $md : '';
+  $class .= ( $sm )             ? ' col-sm-' . $sm : '';
+  $class .= ( $xs )             ? ' col-xs-' . $xs : '';
+  $class .= ( $offset_lg )      ? ' col-lg-offset-' . $offset_lg : '';
+  $class .= ( $offset_md )      ? ' col-md-offset-' . $offset_md : '';
+  $class .= ( $offset_sm )      ? ' col-sm-offset-' . $offset_sm : '';
+  $class .= ( $offset_xs )      ? ' col-xs-offset-' . $offset_xs : '';
+  $class .= ( $pull_lg )        ? ' col-lg-pull-' . $pull_lg : '';
+  $class .= ( $pull_md )        ? ' col-md-pull-' . $pull_md : '';
+  $class .= ( $pull_sm )        ? ' col-sm-pull-' . $pull_sm : '';
+  $class .= ( $pull_xs )        ? ' col-xs-pull-' . $pull_xs : '';
+  $class .= ( $push_lg )        ? ' col-lg-push-' . $push_lg : '';
+  $class .= ( $push_md )        ? ' col-md-push-' . $push_md : '';
+  $class .= ( $push_sm )        ? ' col-sm-push-' . $push_sm : '';
+  $class .= ( $push_xs )        ? ' col-xs-push-' . $push_xs : '';
+  $class .= ( $xclass )   ? ' ' . $xclass : '';
+
+  $data_props = _bs_shortcodes_parse_data_attributes( $data );
+
+  return sprintf(
+    '<div class="%s"%s>%s</div>',
+    check_plain( $class ),
+    ( $data_props ) ? ' ' . $data_props : '',
+    $content
+  );
+}
+
+/**
+ *
+ * bs_shortcodes_list_group
+ *
+ * @author M. W. Delaney
+ *
+ */
+function bs_shortcodes_list_group( $attrs, $content = '' ) {
+
+  extract( shortcode_attrs( array(
+    "linked" => '',
+    "xclass" => '',
+    "data"   => ''
+  ), $attrs ) );
+
+  $class  = 'list-group';
+  $class .= ( $xclass )   ? ' ' . $xclass : '';
+
+  $data_props = _bs_shortcodes_parse_data_attributes( $data );
+
+  return sprintf(
+    '<%1$s class="%2$s"%3$s>%4$s</%1$s>',
+    ( $linked != '' ) ? 'div' : 'ul',
+    check_plain( $class ),
+    ( $data_props ) ? ' ' . $data_props : '',
+    $content
+  );
+}
+
+/**
+ *
+ * bs_shortcodes_list_group_item
+ *
+ * @author M. W. Delaney
+ *
+ */
+function bs_shortcodes_list_group_item( $attrs, $content = '' ) {
+
+  extract( shortcode_attrs( array(
+    "link"    => '',
+    "type"    => '',
+    "active"  => '',
+    "target"   => '',
+    "xclass"  => '',
+    "data"    => ''
+  ), $attrs ) );
+
+  $class  = 'list-group-item';
+  $class .= ( $type )     ? ' list-group-item-' . $type : '';
+  $class .= ( $active   != '' )   ? ' active' : '';
+  $class .= ( $xclass )   ? ' ' . $xclass : '';
+
+  $data_props = _bs_shortcodes_parse_data_attributes( $data );
+
+  return sprintf(
+    '<%1$s %2$s %3$s class="%4$s"%5$s>%6$s</%1$s>',
+    ( $link )     ? 'a' : 'li',
+    ( $link )     ? 'href="' . check_url( $link ) . '"' : '',
+  ( $target )   ? sprintf( ' target="%s"', check_plain( $target ) ) : '',
+    check_plain( $class ),
+    ( $data_props ) ? ' ' . $data_props : '',
+    $content
+  );
+}
+
+/**
+ *
+ * bs_shortcodes_list_group_item_heading
+ *
+ */
+function bs_shortcodes_list_group_item_heading( $attrs, $content = '' ) {
+
+  extract( shortcode_attrs( array(
+    "xclass" => '',
+    "data"   => ''
+  ), $attrs ) );
+
+  $class  = 'list-group-item-heading';
+  $class .= ( $xclass )   ? ' ' . $xclass : '';
+
+  $data_props = _bs_shortcodes_parse_data_attributes( $data );
+
+  return sprintf(
+    '<h4 class="%s"%s>%s</h4>',
+    check_plain( $class ),
+    ( $data_props ) ? ' ' . $data_props : '',
+    $content
+  );
+}
+
+/**
+ *
+ * bs_shortcodes_list_group_item_text
+ *
+ */
+function bs_shortcodes_list_group_item_text( $attrs, $content = '' ) {
+
+   extract( shortcode_attrs( array(
+      "xclass" => '',
+      "data"   => ''
+   ), $attrs ) );
+
+  $class  = 'list-group-item-text';
+  $class .= ( $xclass )   ? ' ' . $xclass : '';
+
+  $data_props = _bs_shortcodes_parse_data_attributes( $data );
+
+  return sprintf(
+    '<p class="%s"%s>%s</p>',
+    check_plain( $class ),
+    ( $data_props ) ? ' ' . $data_props : '',
+    $content
+  );
+}
+
+/**
+ *
+ * bs_shortcodes_breadcrumb
+ *
+ */
+function bs_shortcodes_breadcrumb( $attrs, $content = '' ) {
+
+  extract( shortcode_attrs( array(
+    "xclass" => '',
+    "data"   => ''
+  ), $attrs ) );
+
+  $class  = 'breadcrumb';
+  $class .= ( $xclass )   ? ' ' . $xclass : '';
+
+  $data_props = _bs_shortcodes_parse_data_attributes( $data );
+
+  return sprintf(
+    '<ol class="%s"%s>%s</ol>',
+    check_plain( $class ),
+    ( $data_props ) ? ' ' . $data_props : '',
+    $content
+  );
+}
+
+/**
+ *
+ * bs_shortcodes_breadcrumb_item
+ *
+ * @author M. W. Delaney
+ *
+ */
+function bs_shortcodes_breadcrumb_item( $attrs, $content = '' ) {
+
+  extract( shortcode_attrs( array(
+    "link" => '',
+    "xclass" => '',
+    "data" => ''
+  ), $attrs ) );
+
+  $class  = '';
+  $class .= ( $xclass )   ? ' ' . $xclass : '';
+
+  $data_props = _bs_shortcodes_parse_data_attributes( $data );
+
+  return sprintf(
+    '<li><a href="%s" class="%s"%s>%s</a></li>',
+    check_url( $link ),
+    check_plain( $class ),
+    ( $data_props ) ? ' ' . $data_props : '',
+    $content
+  );
+}
+
+/**
+ *
+ * bs_shortcodes_label
+ *
+ * @author Filip Stefansson
+ * @since 1.0
+ *
+ */
+function bs_shortcodes_label( $attrs, $content = '' ) {
+
+  extract( shortcode_attrs( array(
+    "type"      => '',
+    "xclass"    => '',
+    "data"      => ''
+  ), $attrs ) );
+
+  $class  = 'label';
+  $class .= ( $type )     ? ' label-' . $type : ' label-default';
+  $class .= ( $xclass )   ? ' ' . $xclass : '';
+
+  $data_props = _bs_shortcodes_parse_data_attributes( $data );
+
+  return sprintf(
+    '<span class="%s"%s>%s</span>',
+    check_plain( $class ),
+    ( $data_props ) ? ' ' . $data_props : '',
+    $content
+  );
+}
+
+/**
+ *
+ * bs_shortcodes_badge
+ *
+ * @author Filip Stefansson
+ * @since 1.0
+ *
+ */
+function bs_shortcodes_badge( $attrs, $content = '' ) {
+
+  extract( shortcode_attrs( array(
+    "right"   => '',
+    "xclass"  => '',
+    "data"    => ''
+  ), $attrs ) );
+
+  $class  = 'badge';
+  $class .= ( $right   != '' )    ? ' pull-right' : '';
+  $class .= ( $xclass )   ? ' ' . $xclass : '';
+
+  $data_props = _bs_shortcodes_parse_data_attributes( $data );
+
+  return sprintf(
+    '<span class="%s"%s>%s</span>',
+    check_plain( $class ),
+    ( $data_props ) ? ' ' . $data_props : '',
+    $content
+  );
+}
+
+/**
+ *
+ * bs_shortcodes_icon
+ *
+ * @author Filip Stefansson
+ * @since 1.0
+ *
+ */
+function bs_shortcodes_icon( $attrs, $content = '' ) {
+
+  extract( shortcode_attrs( array(
+    "type"   => '',
+    "xclass" => '',
+    "data"   => ''
+  ), $attrs ) );
+
+  $class  = 'glyphicon';
+  $class .= ( $type )     ? ' glyphicon-' . $type : '';
+  $class .= ( $xclass )   ? ' ' . $xclass : '';
+
+  $data_props = _bs_shortcodes_parse_data_attributes( $data );
+
+  return sprintf(
+    '<i class="%s"%s>%s</i>',
+    check_plain( $class ),
+    ( $data_props ) ? ' ' . $data_props : '',
+    $content
+  );
+}
+
+/**
+ *
+ * simple_table
+ *
+ * @author Filip Stefansson
+ * @since 1.0
+ *
+ * function bs_shortcodes_table( $attrs ) {
+ *     extract( shortcode_attrs( array(
+ *         'cols' => 'none',
+ *         'data' => 'none',
+ *         'bordered' => '',
+ *         'striped' => '',
+ *         'hover' => '',
+ *         'condensed' => '',
+ *     ), $attrs ) );
+ *     $cols = explode(',',$cols);
+ *     $data = explode(',',$data);
+ *     $total = count($cols);
+ *     $return  = '<table class="table ';
+ *     $return .= ($bordered) ? 'table-bordered ' : '';
+ *     $return .= ($striped) ? 'table-striped ' : '';
+ *     $return .= ($hover) ? 'table-hover ' : '';
+ *     $return .= ($condensed) ? 'table-condensed ' : '';
+ *     $return .='"><tr>';
+ *     foreach($cols as $col):
+ *         $return .= '<th>'.$col.'</th>';
+ *     endforeach;
+ *     $output .= '</tr><tr>';
+ *     $counter = 1;
+ *     foreach($data as $datum):
+ *         $return .= '<td>'.$datum.'</td>';
+ *         if($counter%$total==0):
+ *             $return .= '</tr>';
+ *         endif;
+ *         $counter++;
+ *     endforeach;
+ *         $return .= '</table>';
+ *     return $return;
+ * }
+ */
+
+/**
+ *
+ * bs_shortcodes_table_wrap
+ *
+ * @author Filip Stefansson
+ * @since 1.0
+ *
+ */
+function bs_shortcodes_table_wrap( $attrs, $content = '' ) {
+  extract( shortcode_attrs( array(
+    'bordered'  => '',
+    'striped'   => '',
+    'hover'     => '',
+    'condensed' => '',
+    'xclass'    => '',
+    'data'      => ''
+  ), $attrs ) );
+
+  $class  = 'table';
+  $class .= ( $bordered  != '' )     ? ' table-bordered' : '';
+  $class .= ( $striped   != '' )      ? ' table-striped' : '';
+  $class .= ( $hover     != '' )      ? ' table-hover' : '';
+  $class .= ( $condensed != '' )    ? ' table-condensed' : '';
+  $class .= ($xclass)       ? ' ' . $xclass : '';
+
+  $return = '';
+
+  $tag = array('table');
+  $title = '';
+  $content = $content;
+  $return .= _bs_shortcodes_scrape_dom_element($tag, $content, $class, $title, $data);
+  return $return;
+}
+
+
+/**
+ *
+ * bs_shortcodes_well
+ *
+ * @author Filip Stefansson
+ * @since 1.0
+ *
+ * Options:
+ *   size: sm = small, lg = large
+ *
+ */
+function bs_shortcodes_well( $attrs, $content = '' ) {
+
+  extract( shortcode_attrs( array(
+    "size"   => '',
+    "xclass" => '',
+    "data"   => ''
+  ), $attrs ) );
+
+  $class  = 'well';
+  $class .= ( $size )     ? ' well-' . $size : '';
+  $class .= ( $xclass )   ? ' ' . $xclass : '';
+
+  $data_props = _bs_shortcodes_parse_data_attributes( $data );
+
+  return sprintf(
+    '<div class="%s"%s>%s</div>',
+    check_plain( $class ),
+    ( $data_props ) ? ' ' . $data_props : '',
+    $content
+  );
+}
+
+/**
+ *
+ * bs_shortcodes_panel
+ *
+ * @author M. W. Delaney
+ * @since 1.0
+ *
+ */
+function bs_shortcodes_panel( $attrs, $content = '' ) {
+
+  extract( shortcode_attrs( array(
+    "title"   => '',
+    "heading" => '',
+    "type"    => '',
+    "footer"  => '',
+    "xclass"  => '',
+    "data"    => ''
+  ), $attrs ) );
+
+  $class  = 'panel';
+  $class .= ( $type )     ? ' panel-' . $type : ' panel-default';
+  $class .= ( $xclass )   ? ' ' . $xclass : '';
+
+  if( ! $heading && $title ) {
+    $heading = $title;
+    $title = TRUE;
+  }
+
+  $data_props = _bs_shortcodes_parse_data_attributes( $data );
+
+  $footer = ( $footer ) ? '<div class="panel-footer">' . $footer . '</div>' : '';
+
+  if ( $heading ) {
+    $heading = sprintf(
+      '<div class="panel-heading">%s%s%s</div>',
+      ( $title ) ? '<h3 class="panel-title">' : '',
+      check_markup( $heading ),
+      ( $title ) ? '</h3>' : ''
+    );
+  }
+  else {
+    $heading = '';
+  }
+
+  return sprintf(
+    '<div class="%s"%s>%s<div class="panel-body">%s</div>%s</div>',
+    check_plain( $class ),
+    ( $data_props ) ? ' ' . $data_props : '',
+    $heading,
+    $content,
+    ( $footer ) ? ' ' . $footer : ''
+  );
+}
+
+/**
+ *
+ * bs_shortcodes_tabs
+ *
+ * @author Filip Stefansson
+ * @since 1.0
+ * Modified by TwItCh twitch@designweapon.com
+ * Now acts a whole nav/tab/pill shortcode solution!
+ */
+function bs_shortcodes_tabs( $attrs, $content = '' ) {
+
+  extract( shortcode_attrs( array(
+    "type"   => '',
+    "xclass" => '',
+    "data"   => ''
+  ), $attrs ) );
+
+  $ul_class  = 'nav';
+  $ul_class .= ( $type )     ? ' nav-' . $type : ' nav-tabs';
+  $ul_class .= ( $xclass )   ? ' ' . $xclass : '';
+
+  $div_class = 'tab-content';
+
+  $id = 'custom-tabs-'. $GLOBALS['tabs_count'];
+
+  $data_props = _bs_shortcodes_parse_data_attributes( $data );
+
+  // $attrs_map = bs_attribute_map( $content );
+  // Because the Drupal API parses shortcodes from the inside out
+  // we need to do some libxml magic here
+  // ~Jur
+
+  $previous_value = libxml_use_internal_errors(TRUE);
+  $dom = new DOMDocument;
+  $dom->loadHTML($content);
+  libxml_clear_errors();
+  libxml_use_internal_errors($previous_value);
+  $finder = new DomXPath($dom);
+  $domNodes = $finder->query("//div[contains(@class, tab-pane)]");
+  $attrs_map = array();
+  foreach ($domNodes as $domNode) {
+    if (strpos($domNode->getAttribute('class'), 'active') === FALSE) {
+      $active = FALSE;
+    }
+    else {
+      $active = 'true';
+    }
+    $attrs_map[] = array(
+      'tab' => array(
+        'title' => $domNode->getAttribute('title'),
+        'active' => $active,
+      ),
+    );
+  }
+
+  // Extract the tab titles for use in the tab widget.
+  if ( $attrs_map ) {
+    $tabs = array();
+    $GLOBALS['tabs_default_active'] = TRUE;
+    foreach( $attrs_map as $check ) {
+        if( !empty($check["tab"]["active"]) ) {
+            $GLOBALS['tabs_default_active'] = FALSE;
+        }
+    }
+    $i = 0;
+    foreach( $attrs_map as $tab ) {
+      $tabs[] = sprintf(
+        '<li%s><a href="#%s" data-toggle="tab">%s</a></li>',
+        ( !empty($tab["tab"]["active"]) || ($GLOBALS['tabs_default_active'] && $i == 0) ) ? ' class="active"' : '',
+        'custom-tab-' . $GLOBALS['tabs_count'] . '-' . check_plain( $tab["tab"]["title"] ),
+        $tab["tab"]["title"]
+      );
+      $i++;
+    }
+  }
+
+  if( isset( $GLOBALS['tabs_count'] ) )
+    $GLOBALS['tabs_count']++;
+  else
+    $GLOBALS['tabs_count'] = 0;
+
+  return sprintf(
+    '<ul class="%s" id="%s"%s>%s</ul><div class="%s">%s</div>',
+    check_plain( $ul_class ),
+    check_plain( $id ),
+    ( $data_props ) ? ' ' . $data_props : '',
+    ( $tabs )  ? implode( $tabs ) : '',
+    check_plain( $div_class ),
+    $content
+  );
+}
+
+/**
+ *
+ * bs_shortcodes_tab
+ *
+ * @author Filip Stefansson
+ * @since 1.0
+ *
+ */
+function bs_shortcodes_tab( $attrs, $content = '' ) {
+
+  if( !isset( $GLOBALS['tabs_count'] ) )
+    $GLOBALS['tabs_count'] = 0;
+
+  extract( shortcode_attrs( array(
+    'title'   => '',
+    'active'  => '',
+    'fade'    => '',
+    'xclass'  => '',
+    'data'    => ''
+  ), $attrs ) );
+
+  $class  = 'tab-pane';
+  $class .= ( $fade   != '' )            ? ' fade' : '';
+  $class .= ( $active != '' )          ? ' active' : '';
+  $class .= ( $active != '' && $fade != '' ) ? ' in' : '';
+
+  $id = 'custom-tab-'. $GLOBALS['tabs_count'] . '-'. check_plain( $title );
+
+  $data_props = _bs_shortcodes_parse_data_attributes( $data );
+
+  // We need to pass the title attribute to the tabs shortcode here ~Jur
+  return sprintf(
+    '<div id="%s" title="%s" class="%s"%s>%s</div>',
+    check_plain( $id ),
+    check_plain( $title ),
+    check_plain( $class ),
+    ( $data_props ) ? ' ' . $data_props : '',
+    $content
+  );
+
+}
+
+
+
+
+/**
+ *
+ * bs_shortcodes_collapsibles
+ *
+ * @author Filip Stefansson
+ * @since 1.0
+ *
+ */
+function bs_shortcodes_collapsibles( $attrs, $content = '' ) {
+
+  extract( shortcode_attrs( array(
+    "xclass" => '',
+    "data"   => ''
+  ), $attrs ) );
+
+  $class = 'panel-group';
+  $class .= ( $xclass )   ? ' ' . $xclass : '';
+
+  $id = 'custom-collapse-'. $GLOBALS['collapsibles_count'];
+
+  $data_props = _bs_shortcodes_parse_data_attributes( $data );
+
+  if( isset($GLOBALS['collapsibles_count']) )
+    $GLOBALS['collapsibles_count']++;
+
+  return sprintf(
+    '<div class="%s" id="%s"%s>%s</div>',
+    drupal_html_class( $class ),
+    drupal_html_id( $id ),
+    ( $data_props ) ? ' ' . $data_props : '',
+    $content
+  );
+
+}
+
+
+/**
+ *
+ * bs_shortcodes_collapse
+ *
+ * @author Filip Stefansson
+ * @since 1.0
+ *
+ */
+function bs_shortcodes_collapse( $attrs, $content = '' ) {
+
+  if( !isset($GLOBALS['collapsibles_count']) )
+    $GLOBALS['collapsibles_count'] = 0;
+
+  extract( shortcode_attrs( array(
+    "title"   => '',
+    "type"    => '',
+    "active"  => '',
+    "xclass"  => '',
+    "data"    => ''
+  ), $attrs ) );
+
+  $panel_class = 'panel';
+  $panel_class .= ( $type )     ? ' panel-' . $type : ' panel-default';
+  $panel_class .= ( $xclass )   ? ' ' . $xclass : '';
+
+  $collapse_class = 'panel-collapse';
+  $collapse_class .= ( $active != '' )  ? ' in' : ' collapse';
+
+  $parent = 'custom-collapse-'. $GLOBALS['collapsibles_count'];
+  $current_collapse = $parent . '-'. check_plain( $title );
+
+  $data_props = _bs_shortcodes_parse_data_attributes( $data );
+
+  return sprintf(
+    '<div class="%1$s"%2$s>
+      <div class="panel-heading">
+        <h4 class="panel-title">
+          <a class="accordion-toggle" data-toggle="collapse" data-parent="#%3$s" href="#%4$s">%5$s</a>
+        </h4>
+      </div>
+      <div id="%4$s" class="%6$s">
+        <div class="panel-body">%7$s</div>
+      </div>
+    </div>',
+    check_plain( $panel_class ),
+    ( $data_props ) ? ' ' . $data_props : '',
+    $parent,
+    drupal_html_id($current_collapse),
+    $title,
+    check_plain( $collapse_class ),
+    $content
+  );
+}
+
+
+/**
+ *
+ * bs_shortcodes_carousel
+ *
+ * @since 1.0
+ *
+ */
+function bs_shortcodes_carousel( $attrs, $content = '' ) {
+
+  extract( shortcode_attrs( array(
+    "interval" => '',
+    "pause"    => '',
+    "wrap"     => '',
+    "xclass"   => '',
+    "data"     => '',
+  ), $attrs ) );
+
+  $div_class  = 'carousel slide';
+  $div_class .= ( $xclass ) ? ' ' . $xclass : '';
+
+  $inner_class = 'carousel-inner';
+
+  $id = 'custom-carousel-'. $GLOBALS['carousel_count'];
+
+  $data_props = _bs_shortcodes_parse_data_attributes( $data );
+
+  // $attrs_map = bs_attribute_map( $content );
+  // @see bs_shortcodes_tabs
+  // ~Jur
+
+
+  // Extract the slide titles for use in the carousel widget.
+  $count = substr_count($content, 'class="item');
+  $indicators = array();
+  for ($i = 0; $i < $count; $i++) {
+    if ($i == 0) {
+      $active = 'active';
+    }
+    else {
+      $active = '';
+    }
+    $indicators[] = sprintf(
+      '<li class="%s" data-target="%s" data-slide-to="%s"></li>',
+      $active,
+      check_plain( '#' . $id ),
+      check_plain( $i )
+    );
+  }
+
+  if( isset($GLOBALS['carousel_count']) )
+    $GLOBALS['carousel_count']++;
+  else
+    $GLOBALS['carousel_count'] = 0;
+
+  return sprintf(
+    '<div class="%s" id="%s" data-ride="carousel"%s%s%s%s>%s<div class="%s">%s</div>%s%s</div>',
+    check_plain( $div_class ),
+    check_plain( $id ),
+    ( $interval )   ? sprintf( ' data-interval="%d"', $interval ) : '',
+    ( $pause )      ? sprintf( ' data-pause="%s"', check_plain( $pause ) ) : '',
+    ( $wrap != '' )       ? sprintf( ' data-wrap="%s"', check_plain( $wrap ) ) : '',
+    ( $data_props ) ? ' ' . $data_props : '',
+    ( $indicators ) ? '<ol class="carousel-indicators">' . implode( $indicators ) . '</ol>' : '',
+    check_plain( $inner_class ),
+    $content,
+    '<a class="left carousel-control"  href="' . check_url( '#' . $id ) . '" data-slide="prev"><i class="glyphicon glyphicon-chevron-left"></i></a>',
+    '<a class="right carousel-control" href="' . check_url( '#' . $id ) . '" data-slide="next"><i class="glyphicon glyphicon-chevron-right"></i></a>'
+  );
+}
+
+
+/**
+ *
+ * bs_shortcodes_carousel_item
+ *
+ * @author Filip Stefansson
+ * @since 1.0
+ *
+ */
+function bs_shortcodes_carousel_item( $attrs, $content = '' ) {
+
+  if( !isset($GLOBALS['carousel_count']) )
+    $GLOBALS['carousel_count'] = 0;
+
+  extract( shortcode_attrs( array(
+    "active"  => '',
+    "caption" => '',
+    "xclass"  => '',
+    "data"    => ''
+   ), $attrs ) );
+
+  $class  = 'item';
+  $class .= ( $active   != '' ) ? ' active' : '';
+  $class .= ( $xclass ) ? ' ' . $xclass : '';
+
+  $data_props = _bs_shortcodes_parse_data_attributes( $data );
+
+  $content = preg_replace('/class=".*?"/', '', $content);
+
+  return sprintf(
+    '<div class="%s"%s>%s%s</div>',
+    check_plain( $class ),
+    ( $data_props ) ? ' ' . $data_props : '',
+    $content,
+    ( $caption ) ? '<div class="carousel-caption">' . check_markup( $caption ) . '</div>' : ''
+  );
+}
+
+/**
+ *
+ * bs_shortcodes_tooltip
+ *
+ * @author
+ * @since 1.0
+ *
+ */
+
+
+function bs_shortcodes_tooltip( $attrs, $content = '' ) {
+
+  $defaults = array(
+   'title'     => '',
+   'placement' => 'top',
+   'animation' => 'TRUE',
+   'html'      => 'FALSE',
+   'data'      => ''
+  );
+  extract( shortcode_attrs( $defaults, $attrs ) );
+
+  $class  = 'bs-tooltip';
+
+  $data   .= ( $animation ) ? _bs_shortcodes_check_for_data($data) . 'animation,' . $animation : '';
+  $data   .= ( $placement ) ? _bs_shortcodes_check_for_data($data) . 'placement,' . $placement : '';
+  $data   .= ( $html )      ? _bs_shortcodes_check_for_data($data) . 'html,'      . $html      : '';
+
+  $return = '';
+  $tag = 'span';
+  $content = $content;
+  $return .= _bs_shortcodes_get_dom_element($tag, $content, $class, $title, $data);
+  return $return;
+
+}
+
+/**
+ *
+ * bs_shortcodes_popover
+ *
+ */
+
+function bs_shortcodes_popover( $attrs, $content = '' ) {
+
+  $defaults = array(
+    'title'     => '',
+    'text'      => '',
+    'placement' => 'top',
+    'animation' => 'TRUE',
+    'html'      => 'FALSE',
+    'data'      => ''
+  );
+  extract( shortcode_attrs( $defaults, $attrs ) );
+
+  $class = 'bs-popover';
+
+  $data   .= _bs_shortcodes_check_for_data($data) . 'toggle,popover';
+  $data   .= _bs_shortcodes_check_for_data($data) . 'content,' . $text;
+  $data   .= ( $animation ) ? _bs_shortcodes_check_for_data($data) . 'animation,' . $animation : '';
+  $data   .= ( $placement ) ? _bs_shortcodes_check_for_data($data) . 'placement,' . $placement : '';
+  $data   .= ( $html )      ? _bs_shortcodes_check_for_data($data) . 'html,'      . $html      : '';
+
+  $return = '';
+  $tag = 'span';
+  $content = $content;
+  $return .= _bs_shortcodes_get_dom_element($tag, $content, $class, $title, $data);
+  return $return;
+
+}
+
+
+/**
+ *
+ * bs_shortcodes_media
+ *
+ * @author
+ * @since 1.0
+ *
+ */
+
+function bs_shortcodes_media( $attrs, $content = '' ) {
+
+  extract( shortcode_attrs( array(
+    "xclass" => '',
+    "data"   => ''
+  ), $attrs ) );
+
+  $class  = 'media';
+  $class .= ( $xclass )   ? ' ' . $xclass : '';
+
+  $data_props = _bs_shortcodes_parse_data_attributes( $data );
+
+  return sprintf(
+    '<div class="%s"%s>%s</div>',
+    check_plain( $class ),
+    ( $data_props ) ? ' ' . $data_props : '',
+    $content
+  );
+}
+
+function bs_shortcodes_media_object( $attrs, $content = '' ) {
+
+  extract( shortcode_attrs( array(
+    "pull"   => "left",
+    "xclass" => '',
+    "data"   => ''
+  ), $attrs ) );
+
+  $class = "media-object img-responsive";
+  $class .= ($xclass) ? ' ' . $xclass : '';
+
+  $return = '';
+
+  $tag = array('figure', 'div', 'img', 'i', 'span');
+  $title = '';
+  $content = preg_replace('/(<br>)+$/', '', $content);
+  $return .= _bs_shortcodes_scrape_dom_element($tag, $content, $class, $title, $data);
+  $return = '<span class="pull-' . check_plain($pull) . '">' . $return . '</span>';
+  return $return;
+}
+
+function bs_shortcodes_media_body( $attrs, $content = '' ) {
+
+  extract( shortcode_attrs( array(
+    "title"  => '',
+    "xclass" => '',
+    "data"   => ''
+  ), $attrs ) );
+
+  $div_class  = 'media-body';
+  $div_class .= ( $xclass )   ? ' ' . $xclass : '';
+
+  $h4_class  = 'media-heading';
+  $h4_class .= ( $xclass )   ? ' ' . $xclass : '';
+
+  $data_props = _bs_shortcodes_parse_data_attributes( $data );
+
+  return sprintf(
+    '<div class="%s"%s><h4 class="%s">%s</h4>%s</div>',
+    check_plain( $div_class ),
+    ( $data_props ) ? ' ' . $data_props : '',
+    check_plain( $h4_class ),
+    check_markup( $title),
+    $content
+  );
+}
+
+/**
+ *
+ * bs_shortcodes_jumbotron
+ *
+ */
+function bs_shortcodes_jumbotron( $attrs, $content = '' ) {
+
+  extract( shortcode_attrs( array(
+      "title"  => '',
+      "xclass" => '',
+      "data"   => ''
+   ), $attrs ) );
+
+  $class  = 'jumbotron';
+  $class .= ( $xclass )   ? ' ' . $xclass : '';
+
+  $data_props = _bs_shortcodes_parse_data_attributes( $data );
+
+  return sprintf(
+    '<div class="%s"%s>%s%s</div>',
+    check_plain( $class ),
+    ( $data_props ) ? ' ' . $data_props : '',
+    ( $title ) ? '<h1>' . check_plain( $title ) . '</h1>' : '',
+    $content
+  );
+}
+
+/**
+ *
+ * bs_shortcodes_page_header
+ *
+ */
+function bs_shortcodes_page_header( $attrs, $content = '' ) {
+  extract( shortcode_attrs( array(
+    "xclass" => '',
+    "data"   => ''
+  ), $attrs ) );
+  $data_props = _bs_shortcodes_parse_data_attributes( $data );
+
+  $class = "page-header";
+  $class .= ($xclass) ? ' ' . $xclass : '';
+
+  $return = '';
+  $title = '';
+  $tag = 'div';
+  $content = _bs_shortcodes_strip_paragraph($content);
+  $content = _bs_shortcodes_nest_dom_element('h1', 'div', $content);
+  $return .= _bs_shortcodes_get_dom_element($tag, $content, $class, $title, $data);
+  return $return;
+
+}
+
+/**
+ *
+ * bs_shortcodes_lead
+ *
+ */
+function bs_shortcodes_lead( $attrs, $content = '' ) {
+  extract( shortcode_attrs( array(
+    "xclass" => '',
+    "data"   => ''
+  ), $attrs ) );
+
+  $class  = 'lead';
+  $class .= ( $xclass )   ? ' ' . $xclass : '';
+
+  $data_props = _bs_shortcodes_parse_data_attributes( $data );
+
+  return sprintf(
+    '<p class="%s"%s>%s</p>',
+    check_plain( $class ),
+    ( $data_props ) ? ' ' . $data_props : '',
+    $content
+  );
+}
+
+/**
+ *
+ * bs_shortcodes_emphasis
+ *
+ */
+function bs_shortcodes_emphasis( $attrs, $content = '' ) {
+
+  extract( shortcode_attrs( array(
+    "type"   => '',
+    "xclass" => '',
+    "data"   => ''
+  ), $attrs ) );
+
+  $class  = '';
+  $class .= ( $type )   ? 'text-' . $type : 'text-muted';
+  $class .= ( $xclass ) ? ' ' . $xclass : '';
+
+  $data_props = _bs_shortcodes_parse_data_attributes( $data );
+
+  return sprintf(
+    '<span class="%s"%s>%s</span>',
+    check_plain( $class ),
+    ( $data_props ) ? ' ' . $data_props : '',
+    $content
+  );
+}
+
+/**
+ *
+ * bs_shortcodes_img
+ *
+ */
+function bs_shortcodes_img( $attrs, $content = '' ) {
+  extract( shortcode_attrs( array(
+    "type"       => '',
+    "responsive" => '',
+    "xclass"     => '',
+    "title"     => '',
+    "data"       => ''
+  ), $attrs ) );
+
+  $class  = '';
+  $class .= ( $type )       ? 'img-' . $type . ' ' : '';
+  $class .= ( $responsive   != '' ) ? ' img-responsive' : '';
+  $class .= ( $xclass )     ? ' ' . $xclass : '';
+
+  $return = '';
+  $tag = array('img');
+  $return .= _bs_shortcodes_scrape_dom_element($tag, $content, $class, $title, $data);
+  return $return;
+
+}
+
+/**
+ *
+ * bs_shortcodes_thumbnail
+ *
+ */
+function bs_shortcodes_thumbnail( $attrs, $content = '' ) {
+  extract( shortcode_attrs( array(
+    "xclass"  => '',
+    "has_content" => '',
+    "title" => '', // adding missing variable ~Jur
+    "data"    => ''
+  ), $attrs ) );
+
+  $class  = "thumbnail";
+  $class .= ($xclass) ? ' ' . $xclass : '';
+
+  $return = '';
+  if($has_content) {
+    $content = '<div>' . $content . '</div>';
+    $tag = array('div');
+  } else {
+      $tag = array('a', 'img');
+  }
+  $content = $content;
+  $return .= _bs_shortcodes_scrape_dom_element($tag, $content, $class, $title, $data);
+  return $return;
+
+}
+
+/**
+ *
+ * bs_shortcodes_responsive
+ *
+ */
+function bs_shortcodes_responsive( $attrs, $content = '' ) {
+
+  extract( shortcode_attrs( array(
+    "visible" => '',
+    "hidden"  => '',
+    "block"  => '',
+    "inline"  => '',
+    "inline_block"  => '',
+    "xclass"  => '',
+    "data"    => ''
+  ), $attrs ) );
+
+  $class = '';
+  if( $visible ) {
+    $visible = explode( ' ', $visible );
+    foreach($visible as $v):
+      $class .= "visible-$v ";
+    endforeach;
+  }
+  if( $hidden ) {
+    $hidden = explode( ' ', $hidden );
+    foreach( $hidden as $h ):
+      $class .= "hidden-$h ";
+    endforeach;
+  }
+  if( $block ) {
+    $block = explode( ' ', $block );
+    foreach( $block as $b ):
+      $class .= "visible-$b-block ";
+    endforeach;
+  }
+  if( $inline ) {
+    $inline = explode( ' ', $inline );
+    foreach( $inline as $i ):
+      $class .= "visible-$i-inline ";
+    endforeach;
+  }
+  if( $inline_block ) {
+    $inline_block = explode( ' ', $inline_block );
+    foreach( $inline_block as $ib ):
+      $class .= "visible-$ib-inline ";
+    endforeach;
+  }
+  $class .= ( $xclass ) ? ' ' . $xclass : '';
+
+  $data_props = _bs_shortcodes_parse_data_attributes( $data );
+
+  return sprintf(
+    '<span class="%s"%s>%s</span>',
+    check_plain( $class ),
+    ( $data_props ) ? ' ' . $data_props : '',
+    $content
+  );
+}
+
+/**
+ *
+ * bs_shortcodes_modal
+ *
+ * @author M. W. Delaney
+ * @since 1.0
+ *
+ */
+function bs_shortcodes_modal( $attrs, $content = '' ) {
+
+  extract( shortcode_attrs( array(
+    "text"    => '',
+    "title"   => '',
+    "size"    => '',
+    "xclass"  => '',
+    "data"    => ''
+  ), $attrs ) );
+
+  $a_class  = '';
+  $a_class .= ( $xclass )   ? ' ' . $xclass : '';
+
+  $div_class  = 'modal fade';
+  $div_class .= ( $size ) ? ' bs-modal-' . $size : '';
+
+  $id = 'custom-modal-' . check_plain( $title );
+
+  $data_props = _bs_shortcodes_parse_data_attributes( $data );
+
+  return sprintf(
+    '<a data-toggle="modal" href="#%1$s" class="%2$s"%3$s>%4$s</a>
+      <div class="%5$s" id="%1$s" tabindex="-1" role="dialog" aria-hidden="TRUE">
+          <div class="modal-dialog">
+              <div class="modal-content">
+                  <div class="modal-header">
+                      <button type="button" class="close" data-dismiss="modal" aria-hidden="TRUE">&times;</button>
+                      %6$s
+                  </div>
+                  <div class="modal-body">
+                      %7$s
+                  </div>
+              </div> <!-- /.modal-content -->
+          </div> <!-- /.modal-dialog -->
+      </div> <!-- /.modal -->
+    ',
+    drupal_html_id( $id ),
+    check_plain( $a_class ),
+    ( $data_props ) ? ' ' . $data_props : '',
+    check_markup( $text ),
+    check_plain( $div_class ),
+    ( $title ) ? '<h4 class="modal-title">' . $title . '</h4>' : '',
+    $content
+  );
+}
+
+/**
+ *
+ * bs_shortcodes_modal_footer
+ *
+ * @author M. W. Delaney
+ * @since 1.0
+ *
+ */
+function bs_shortcodes_modal_footer( $attrs, $content = '' ) {
+
+  extract( shortcode_attrs( array(
+    "xclass" => '',
+    "data"   => '',
+  ), $attrs ) );
+
+  $class  = 'modal-footer';
+  $class .= ( $xclass ) ? ' ' . $xclass : '';
+
+  $data_props = _bs_shortcodes_parse_data_attributes( $data );
+
+  return sprintf(
+    '<div class="%s"%s>%s</div>',
+    check_plain( $class ),
+    ( $data_props ) ? ' ' . $data_props : '',
+    $content
+  );
+}
+
+/**
+ *
+ * bs_shortcodes_help
+ *
+ * Provides link to documentation in text format tips area
+ */
+function bs_shortcodes_shortcode_help( $attrs, $content = '' ) {
+  return false;
+}
+
+function bs_shortcodes_shortcode_help_tips($format, $long) {
+  $output = '<p>' . t('<strong>Bootstrap 3 shortcodes</strong> supports all bootstrap components, including responsive grids, buttons, tabs, accordeons, wells, dividers etc. Documentation:' . '</p>');
+  $output .= '<div class="row"><div class="col-md-3">' . t('<a href="@docs" target="_blank">Shortcodes overview and examples</a>', array(
+  '@docs' => 'https://github.com/filipstefansson/bootstrap-3-shortcodes#shortcode-reference',
+  )) . '</div>';
+  $output .= '<div class="row"><div class="col-md-3">' . t('<a href="@docs" target="_blank">Bootstrap CSS documentation</a>', array(
+  '@docs' => 'http://getbootstrap.com/css/',
+  )) . '</div>';
+  $output .= '<div class="row"><div class="col-md-3">' . t('<a href="@docs" target="_blank">Bootstrap Components documentation</a>', array(
+  '@docs' => 'http://getbootstrap.com/components/',
+  )) . '</div>';
+  $output .= '<div class="row"><div class="col-md-3">' . t('<a href="@docs" target="_blank">Bootstrap Javascript documentation</a>', array(
+  '@docs' => 'http://getbootstrap.com/javascript/',
+  )) . '</div></div>';
+
+  return $output;
+}
+
+/**
+ *
+ * Attributes callbacks
+ *
+ */
+
+require_once dirname(__FILE__) . '/includes/bootstrap-shortcodes-attributes.inc';
+
+
+/**
+ *
+ * Parse data-attributes for shortcodes
+ *
+ */
+function _bs_shortcodes_parse_data_attributes( $data ) {
+
+  $data_props = '';
+
+  if( $data ) {
+    $data = explode( '|', $data );
+
+    foreach( $data as $d ) {
+      $d = explode( ',', $d );
+      $data_props .= sprintf( 'data-%s="%s" ', check_plain( $d[0] ), check_plain( trim( $d[1] ) ) );
+    }
+  }
+  else {
+    $data_props = FALSE;
+  }
+  return $data_props;
+}
+
+/**
+ *
+ * get DOMDocument element and apply shortcode parameters to it. Create the element if it doesn't exist
+ *
+ */
+  function _bs_shortcodes_get_dom_element( $tag, $content, $class, $title, $data = '' ) {
+
+  //clean up content
+  $content = trim(trim($content), chr(0xC2).chr(0xA0));
+  $previous_value = libxml_use_internal_errors(TRUE);
+
+  $dom = new DOMDocument;
+  $dom->loadXML($content);
+
+  libxml_clear_errors();
+  libxml_use_internal_errors($previous_value);
+
+  if(!$dom->documentElement) {
+    $element = $dom->createElement($tag, $content);
+    $dom->appendChild($element);
+  }
+
+  $dom->documentElement->setAttribute('class', $dom->documentElement->getAttribute('class') . ' ' . check_plain( $class ));
+  if( $title ) {
+    $dom->documentElement->setAttribute('title', $title );
+  }
+  if( $data ) {
+    $data = explode( '|', $data );
+    foreach( $data as $d ):
+    $d = explode(',',$d);
+    $dom->documentElement->setAttribute('data-'.$d[0],trim($d[1]));
+    endforeach;
+  }
+  return $dom->saveXML($dom->documentElement);
+}
+
+/**
+ *
+ * Scrape the shortcode's contents for a particular DOMDocument tag or tags, pull them out, apply attributes, and return just the tags.
+ *
+ */
+function _bs_shortcodes_scrape_dom_element( $tag, $content, $class, $title, $data = '' ) {
+  if ($content && is_array($tag)) {
+    $previous_value = libxml_use_internal_errors(TRUE);
+
+    $dom = new DOMDocument;
+    $dom->loadHTML($content);
+
+    libxml_clear_errors();
+    libxml_use_internal_errors($previous_value);
+    foreach ($tag as $find) {
+      $tags = $dom->getElementsByTagName($find);
+      foreach ($tags as $find_tag) {
+        $outputdom = new DOMDocument;
+        $new_root = $outputdom->importNode($find_tag, TRUE);
+        $outputdom->appendChild($new_root);
+
+        if(is_object($outputdom->documentElement)) {
+          $outputdom->documentElement->setAttribute('class', $outputdom->documentElement->getAttribute('class') . ' ' . check_plain( $class ));
+          if( $title ) {
+            $outputdom->documentElement->setAttribute('title', $title );
+          }
+          if( $data ) {
+            $data = explode( '|', $data );
+            foreach( $data as $d ):
+              $d = explode(',',$d);
+              $outputdom->documentElement->setAttribute('data-'.$d[0],trim($d[1]));
+            endforeach;
+          }
+        }
+        return $outputdom->saveHTML($outputdom->documentElement);
+
+      }
+    }
+  }
+  else {
+    return '';
+  }
+}
+
+/**
+ *
+ * Find if content contains a particular tag, if not, create it, either way wrap it in a wrapper tag
+ *
+ *     Example: Check if the contents of [page-header] include an h1, if not, add one, then wrap it all in a div so we can add classes to that.
+ *
+ */
+function _bs_shortcodes_nest_dom_element($find, $append, $content) {
+
+  $previous_value = libxml_use_internal_errors(TRUE);
+
+  $dom = new DOMDocument;
+  $dom->loadXML($content);
+
+  libxml_clear_errors();
+  libxml_use_internal_errors($previous_value);
+
+  //Does $content include the tag we're looking for?
+  $hasFind = $dom->getElementsByTagName($find);
+
+  //If not, add it and wrap it all in our append tag
+  if( $hasFind->length == 0 ) {
+    $wrapper = $dom->createElement($append);
+    $dom->appendChild($wrapper);
+
+    $tag = $dom->createElement($find, $content);
+    $wrapper->appendChild($tag);
+  }
+
+  //If so, just wrap everything in our append tag
+  else {
+    $new_root = $dom->createElement($append);
+    $new_root->appendChild($dom->documentElement);
+    $dom->appendChild($new_root);
+  }
+  return $dom->saveXML($dom->documentElement);
+}
+
+/**
+ *
+ * Add dividers to data attributes content if needed
+ *
+ */
+function _bs_shortcodes_check_for_data( $data ) {
+  if( $data ) {
+  return "|";
+  }
+}
+
+/**
+ *
+ * If the user puts a return between the shortcode and its contents, sometimes we want to strip the resulting P tags out
+ *
+ */
+function _bs_shortcodes_strip_paragraph( $content ) {
+  $content = str_ireplace( '<p>','',$content );
+  $content = str_ireplace( '</p>','',$content );
+  return $content;
+}
+

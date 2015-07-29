@@ -1,0 +1,12 @@
+name = Parallax Background
+description = Create a Parallax Background effect on any tagged element.
+core = 7.x
+
+configure = admin/config/user-interface/parallax_bg
+
+; Information added by Drupal.org packaging script on 2014-04-24
+version = "7.x-1.2"
+core = "7.x"
+project = "parallax_bg"
+datestamp = "1398376731"
+

@@ -1,0 +1,11 @@
+name = jQuery Countdown Timer
+description = This module provides a block with a jQuery countdown timer 
+core = 7.x
+dependencies[] = date_api
+
+; Information added by drupal.org packaging script on 2013-06-20
+version = "7.x-1.5"
+core = "7.x"
+project = "jquery_countdown_timer"
+datestamp = "1371747052"
+

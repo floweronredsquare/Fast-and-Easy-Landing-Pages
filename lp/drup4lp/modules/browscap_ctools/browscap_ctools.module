@@ -1,0 +1,26 @@
+<?php
+
+/**
+ * @file Browscap CTools.
+ * Chaos Tools plugins for Browscap.
+ *
+ * This file contains API hooks to register the module.
+ */
+
+/**
+ * Implement hook_ctools_plugin_api()
+ */
+function browscap_ctools_ctools_plugin_api($module, $api) {
+  if ($module == 'page_manager') {
+    return array('version' => 2);
+  }
+}
+
+/**
+ * Implement hook_ctools_plugin_directory()
+ */
+function browscap_ctools_ctools_plugin_directory($module, $plugin) {
+  if ($module == 'ctools' && !empty($plugin)) {
+    return "plugins/$plugin";
+  }
+}

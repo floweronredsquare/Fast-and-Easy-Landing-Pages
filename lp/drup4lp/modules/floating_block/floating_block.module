@@ -1,0 +1,79 @@
+<?php
+
+/**
+ * @file
+ * The floating_block module allows parts of the site to stay on the page when
+ * scrolling.
+ */
+
+/**
+ * Implements hook_init().
+ */
+function floating_block_init() {
+  $floating_blocks = variable_get('floating_blocks', array());
+
+  //Only load the javascript if floating blocks have been configured.
+  if (count($floating_blocks)) {
+    drupal_add_js(array(
+      'floating_block' => array(
+        'settings' => $floating_blocks,
+        'minWidth' => variable_get('floating_block_min_width', 0),
+      ),
+    ), array('type' => 'setting', 'scope' => JS_DEFAULT));
+    drupal_add_js(drupal_get_path('module', 'floating_block') . '/floating_block.js');
+  }
+}
+
+/**
+ * Implements hook_menu().
+ */
+function floating_block_menu() {
+  $items = array();
+  $items['admin/config/user-interface/floating-block'] = array(
+    'title' => 'Floating block',
+    'description' => 'Configure floating block.',
+    'access arguments' => array('administer site configuration'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('floating_block_admin'),
+    'file' => 'floating_block.admin.inc'
+  );
+  return $items;
+}
+
+/**
+ * Implements hook_help().
+ */
+function floating_block_help($path, $arg) {
+  // Remind site administrators about the {node_access} table being flagged
+  // for rebuild. We don't need to issue the message on the confirm form, or
+  // while the rebuild is being processed.
+  if ($path != 'admin/reports/status/rebuild' && $path != 'batch' && strpos($path, '#') === FALSE
+      && user_access('access administration pages') && node_access_needs_rebuild()) {
+    if ($path == 'admin/reports/status') {
+      $message = t('The content access permissions need to be rebuilt.');
+    }
+    else {
+      $message = t('The content access permissions need to be rebuilt. <a href="@node_access_rebuild">Rebuild permissions</a>.', array('@node_access_rebuild' => url('admin/reports/status/rebuild')));
+    }
+    drupal_set_message($message, 'error');
+  }
+
+  switch ($path) {
+    case 'admin/help#floating_block':
+      $output = '';
+      $output .= '<h3>' . t('About') . '</h3>';
+      $output .= '<p>' . t('The Floating block module allows you to keep html blocks, selected using jquery selectors in a fixed position on the page as you scroll. It works in a similar way the table header fixer in Drupal Core. This means that when the user scrolls their browser selected parts of the page can stay in the users view. This is extremely useful when you have pages with lots of content and you want a side menu to stay in view.') . '</p>';
+      return $output;
+    case 'admin/config/user-interface/floating-block':
+      $output = '<h3>' . t('How to configure a floating block') . '</h3>';
+      $output .= '<p>' . t('Use the textbox below a floating block configurations, one per line. See below for example configurations:') . '</p>';
+      $output .= '<dl>';
+      $output .= '<dt>' . t('<code>#sidebar-left</code>') . '</dt>';
+      $output .= '<dd>' . t('Using the jQuery selector #sidebar-left float the left sidebar. The selector will depend on your chosen theme. The selector can be any valid <a href="@jquery_selector_url">jQuery selector</a>.', array('@jquery_selector_url' => 'http://api.jquery.com/category/selectors/')) . '</dd>';
+      $output .= '<dt>' . t('<code>#sidebar-left|padding_top=8,padding_bottom=4</code>') . '</dt>';
+      $output .= '<dd>' . t('Float the left sidebar. Once the block is floating the top will be offset 8px from the top of the page and if the floating block comes near the bottom of the page it will be offset 4px from the bottom of the page.') . '</dd>';
+      $output .= '<dt>' . t('<code>#sidebar-left|container=#main</code>') . '</dt>';
+      $output .= '<dd>' . t('Float the left sidebar within a container in your theme called <code>#main</code>') . '</dd>';
+      return $output;
+  }
+}
